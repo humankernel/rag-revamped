@@ -1,0 +1,32 @@
+import os
+from typing import Literal, Optional
+
+import torch
+from dotenv import load_dotenv
+from pydantic import BaseModel, computed_field
+
+load_dotenv()
+
+
+class Settings(BaseModel):
+    EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "BAAI/bge-m3")
+    EMBEDDING_TOKEN_LIMIT: int = 8190
+    RERANKER_MODEL: str = os.getenv("RERANKER_MODEL", "BAAI/bge-reranker-v2-m3")
+    LLM_MODEL: str = os.getenv(
+        "LLM_MODEL", "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"
+    )
+    DTYPE: str = os.getenv("DTYPE", "bfloat16")
+    CTX_WINDOW: int = 8192
+    TORCH_DEVICE: Optional[Literal["cuda", "cpu"]] = None
+
+    @computed_field
+    @property
+    def DEVICE(self) -> Literal["cuda", "cpu"]:
+        if self.TORCH_DEVICE:
+            return self.TORCH_DEVICE
+        if torch.cuda.is_available():
+            return "cuda"
+        return "cpu"
+
+
+settings = Settings()
