@@ -15,7 +15,7 @@ class Settings(BaseModel):
     LLM_MODEL: str = os.getenv(
         "LLM_MODEL", "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"
     )
-    DTYPE: str = os.getenv("DTYPE", "bfloat16")
+    DTYPE: str = os.getenv("DTYPE", "float16")
     CTX_WINDOW: int = 8192
     TORCH_DEVICE: Optional[Literal["cuda", "cpu"]] = None
 
