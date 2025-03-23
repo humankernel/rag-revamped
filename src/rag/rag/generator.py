@@ -78,5 +78,5 @@ def generate_answer(
         query=query, history=relevant_history, context=relevant_context
     )
 
-    for response in model.generate(prompt, model_params):
+    for response in model.generate_stream(prompt, model_params):
         yield response
