@@ -47,7 +47,7 @@ class EmbeddingModel(metaclass=SingletonMeta):
         return_sparse: bool = False,
         return_colbert: bool = False,
         batch_size: int = 32,
-        **kwargs,
+        # **kwargs,
     ) -> dict[
         Literal["dense", "sparse", "colbert"],
         Optional[
@@ -85,8 +85,7 @@ class EmbeddingModel(metaclass=SingletonMeta):
         assert return_dense or return_sparse or return_colbert, (
             "At least one of return_dense | return_sparse | return_colbert must be True"
         )
-        if batch_size <= 0:
-            raise ValueError("batch_size must be positive")
+        assert batch_size > 0, "batch_size must be positive"
 
         # preallocate
         # TODO: conv to list again is incase sentences is a generator
@@ -102,17 +101,18 @@ class EmbeddingModel(metaclass=SingletonMeta):
         with self._lock:
             idx = 0
             for batch in batched(sentences, batch_size):
+                current_batch_size = len(batch)
                 result = self._model.encode(
                     batch,
-                    batch_size=batch_size,
+                    batch_size=current_batch_size,
                     return_dense=return_dense,
                     return_sparse=return_sparse,
                     return_colbert_vecs=return_colbert,
                     max_length=settings.EMBEDDING_TOKEN_LIMIT,
-                    **kwargs,
+                    # **kwargs,
                 )
                 if return_dense:
-                    dense_embeddings[idx : idx + batch_size] = result[
+                    dense_embeddings[idx : idx + current_batch_size] = result[
                         "dense_vecs"
                     ]
                 if return_sparse:
