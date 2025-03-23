@@ -31,13 +31,10 @@ class LLMModel(metaclass=SingletonMeta):
     @cache
     def count_tokens(self, text: str) -> int:
         assert self._model, "LLM model not initialized"
-        # return len(text) // 4
-        return len(self._model.get_tokenizer().encode(text))
+        tokens = self._model.get_tokenizer().encode(text)
+        return len(tokens)
 
-    def generate(
-        self, prompt: str, model_params
-    ) -> str | Generator[str, None, None]:
-        assert self._model, "LLM model not initialized"
+    def generate(self, prompt: str, model_params: dict = {}) -> str:
         assert prompt, "A prompt must be provided!"
         total_tokens = self.count_tokens(prompt)
         assert total_tokens < settings.CTX_WINDOW, "messages exceed ctx window"
@@ -50,27 +47,28 @@ class LLMModel(metaclass=SingletonMeta):
             presence_penalty=model_params.get("presence_penalty", 1.2),
             repetition_penalty=model_params.get("repetition_penalty", 1.2),
         )
-        stream = model_params.get("stream", False)
 
         with self._lock:
-            outputs = self._model.generate(
-                prompt, sampling_params=sampling_params
-            )
-            if stream:
-                for output in outputs:
-                    yield output.outputs[0].text
-            else:
-                return outputs[0].outputs[0].text
+            outputs = self._model.generate(prompt, sampling_params)
+            return outputs[0].outputs[0].text
 
+    def generate_stream(
+        self, prompt: str, model_params: dict = {}
+    ) -> Generator[str, None, None]:
+        assert prompt, "A prompt must be provided!"
+        total_tokens = self.count_tokens(prompt)
+        assert total_tokens < settings.CTX_WINDOW, "messages exceed ctx window"
 
-# llm = LLMModel()
+        sampling_params = SamplingParams(
+            max_tokens=model_params.get("max_tokens", 300),
+            temperature=model_params.get("temperature", 0.6),
+            top_p=model_params.get("top_p", 0.95),
+            frequency_penalty=model_params.get("frequency_penalty", 0.5),
+            presence_penalty=model_params.get("presence_penalty", 1.2),
+            repetition_penalty=model_params.get("repetition_penalty", 1.2),
+        )
 
-# for response in llm.chat_completion(
-#     [
-#         {"role": "system", "content": "Soy un chatbot amigable"},
-#         {"role": "user", "content": "Cual es la formula de la vida?"},
-#     ],
-#     stream=True,
-#     temperature=0.6,
-# ):
-#     print(response)
+        with self._lock:
+            outputs = self._model.generate(prompt, sampling_params)
+            for output in outputs:
+                yield output.outputs[0].text
