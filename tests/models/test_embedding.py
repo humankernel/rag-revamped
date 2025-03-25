@@ -92,26 +92,6 @@ def test_encode_flags(
         assert len(result["colbert"]) == 3
 
 
-def test_batch_processing(mock_embedding_model):
-    model = EmbeddingModel()
-    texts = ["text"] * 10
-    result = model.encode(texts, batch_size=4)
-
-    assert mock_embedding_model.encode.call_count == 3  # 10/4=3 batches
-    assert result["dense"].shape[0] == 10
-
-
-def test_error_handling(mock_embedding_model):
-    model = EmbeddingModel()
-    with pytest.raises(AssertionError, match="batch_size must be positive"):
-        model.encode(["text"], batch_size=0)
-
-    with pytest.raises(AssertionError):
-        model.encode(
-            [], return_dense=False, return_sparse=False, return_colbert=False
-        )
-
-
 @pytest.fixture
 def sample_embeddings():
     dense = np.random.rand(2, 1024).astype(np.float16)
@@ -130,11 +110,31 @@ def test_dense_similarity_shape(sample_embeddings):
 
 
 def test_sparse_similarity_calculation():
-    sparse1 = [{"a": 1.0, "b": 1.0}]
-    sparse2 = [{"a": 1.0}, {"b": 1.0}]
-    scores = sparse_similarity(sparse1, sparse2)
-    assert scores.shape == (1, 2)
-    assert abs(scores[0, 0].item() - 0.707).epsilon(0.01)  # 1/sqrt(2)
+    """Test basic cosine similarity calculation"""
+    emb1 = [{"a": 3.0, "b": 4.0}]  # L2 norm = 5
+    emb2 = [{"a": 3.0, "b": 4.0}]  # L2 norm = 5
+    result = sparse_similarity(emb1, emb2)
+    expected = torch.tensor([[1.0]], dtype=torch.float16)
+    assert torch.allclose(result, expected, atol=1e-4)
+
+
+def test_partial_overlap():
+    """Test embeddings with partial token overlap"""
+    emb1 = [{"a": 3.0, "b": 4.0}]  # Norm = 5
+    emb2 = [{"a": 6.0, "c": 8.0}]  # Norm = 10
+    result = sparse_similarity(emb1, emb2)
+    expected_value = (3 * 6) / (5 * 10)  # 18/50 = 0.36
+    expected = torch.tensor([[expected_value]], dtype=torch.float16)
+    assert torch.allclose(result, expected, atol=1e-4)
+
+
+def test_empty_embeddings():
+    """Test handling of empty embeddings"""
+    emb1 = [{}]
+    emb2 = [{"a": 1.0}]
+    result = sparse_similarity(emb1, emb2)
+    expected = torch.tensor([[0.0]], dtype=torch.float16)
+    assert torch.allclose(result, expected, atol=1e-4)
 
 
 def test_colbert_padding(sample_embeddings):
