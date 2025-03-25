@@ -17,12 +17,17 @@ def benchmark_embedding_model(
         time_taken = timeit.timeit(wrapper, number=num_runs) / num_runs
         print(f"{name}: {time_taken:.4f}s (avg over {num_runs} runs)")
 
-    print(f"\nBenchmarking with {len(sentences)} sentences, batch_size={batch_size}")
+    print(
+        f"\nBenchmarking with {len(sentences)} sentences, batch_size={batch_size}"
+    )
 
     # Warm-up
     for _ in range(3):
         model.encode(
-            sentences, return_dense=True, return_sparse=True, return_colbert=True
+            sentences,
+            return_dense=True,
+            return_sparse=True,
+            return_colbert=True,
         )
 
     # Benchmark different configurations

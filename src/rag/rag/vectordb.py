@@ -108,7 +108,9 @@ class KnowledgeBase:
         # top_indices = torch.argsort(hybrid_scores)[-top_k:][::-1]
 
         if reranker_model:
-            top_texts = list(self.chunks[idx].text for idx in top_indices.tolist())
+            top_texts = list(
+                self.chunks[idx].text for idx in top_indices.tolist()
+            )
             pairs = list((query, text) for text in top_texts)
             rerank_scores = reranker_model.compute_score(pairs)
             top_indices = np.argsort(rerank_scores)[-top_r:][::-1]

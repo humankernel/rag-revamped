@@ -6,6 +6,7 @@ class Prompt(TypedDict):
     error_prompt: str
     generate_answer: str
 
+
 # TODO: add deepseek recomendation if math
 # Please reason step by step, and put your final answer within \boxed{}.
 # we recommend enforcing the model to initiate its response with "<think>\n" at the beginning of every output
