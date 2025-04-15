@@ -4,8 +4,8 @@ import numpy as np
 from FlagEmbedding import FlagReranker
 from vllm import LLM
 
-from rag.settings import settings
-from rag.utils.helpers import SingletonMeta
+from settings import settings
+from utils.helpers import SingletonMeta
 
 
 class RerankerModel(metaclass=SingletonMeta):
@@ -15,10 +15,13 @@ class RerankerModel(metaclass=SingletonMeta):
     def __init__(self, model_name: str = settings.RERANKER_MODEL, **kwargs):
         self._model = FlagReranker(model_name, **kwargs)
 
-    def compute_score(self, pairs: list[tuple[str, str]], **kwargs) -> np.array:
+    def compute_score(
+        self, pairs: list[tuple[str, str]], **kwargs
+    ) -> np.ndarray:
         assert self._model, "LLM model not initialized"
         with self._lock:
-            return self._model.compute_score(pairs, normalize=True, **kwargs)
+            scores = self._model.compute_score(pairs, normalize=True, **kwargs)
+            return scores
 
 
 class RerankerVLLMModel(metaclass=SingletonMeta):
@@ -28,7 +31,7 @@ class RerankerVLLMModel(metaclass=SingletonMeta):
     def __init__(self, model_name: str = settings.RERANKER_MODEL, **kwargs):
         self._model = LLM(model_name, task="score", **kwargs)
 
-    def compute_score(self, pairs: list[tuple[str, str]], **kwargs) -> np.array:
+    def compute_score(self, pairs: list[tuple[str, str]]) -> np.ndarray:
         assert self._model, "LLM model not initialized"
         assert all(
             isinstance(pair, tuple) and len(pair) == 2 for pair in pairs
@@ -40,4 +43,4 @@ class RerankerVLLMModel(metaclass=SingletonMeta):
                 for text1, text2 in pairs
             ]
             # TODO: make sure they are normalized
-            return scores
+            return np.array(scores)

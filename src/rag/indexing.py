@@ -7,9 +7,9 @@ import pymupdf  # temporal
 from docling.chunking import HybridChunker
 from docling.document_converter import DocumentConverter
 
-from rag.settings import settings
-from rag.utils.helpers import SingletonMeta
-from rag.utils.types import Chunk, Document
+from settings import settings
+from utils.helpers import SingletonMeta
+from utils.types import Chunk, Document
 
 
 class LoadDocuments(metaclass=SingletonMeta):

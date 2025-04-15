@@ -1,8 +1,8 @@
 from typing import Generator
 
-from rag.models.llm import LLMModel
-from rag.settings import settings
-from rag.utils.types import ChatMessage, RetrievedChunk
+from models.llm import LLMModel
+from settings import settings
+from utils.types import ChatMessage, RetrievedChunk
 
 
 def compress_history(
@@ -37,23 +37,23 @@ def create_prompt(query: str, history: list[ChatMessage], context: str) -> str:
         prompt = ""
         for msg in messages:
             if msg["role"] == "system" or msg["role"] == "assistant":
-                prompt += f"<｜Assistant｜> {msg['content']}\n\n"
+                prompt += f"<|Assistant|> {msg['content']}\n\n"
             elif msg["role"] == "user":
-                prompt += f"<｜User｜> {msg['content']}\n\n"
+                prompt += f"<|User|> {msg['content']}\n\n"
         return prompt
 
     prompt = format_chat_messages(history)
-    prompt += f"<｜User｜> {query}\n\n"
+    prompt += f"<|User|> {query}\n\n"
 
     if context:
         prompt += (
-            f"<｜Assistant｜> Given the context: {context},"
-            f"let’s reason step-by-step about how to respond to your query: {query}. "
+            f"<|Assistant|> Given the context: {context},"
+            f"let's reason step-by-step about how to respond to your query: {query}."
             " <think>\n"
         )
     else:
         # TODO: logic to avoid hallucinations
-        prompt += "<｜Assistant｜> <think>\n"
+        prompt += "<|Assistant|> <think>\n"
 
     # 'Provide step-by-step reasoning enclosed in <think> </think> tags, followed by the final answer enclosed in \boxed{} tags.' \
     # If its math
