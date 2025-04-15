@@ -1,19 +1,23 @@
 import logging
+import pickle
 import time
 from pathlib import Path
 
 import numpy as np
 import torch
 
-from rag.models.embedding import (
+from models.embedding import (
+    ColbertEmbeddings,
+    DenseEmbeddings,
     EmbeddingModel,
+    SparseEmbeddings,
     calculate_hybrid_scores,
     colbert_similarity,
     dense_similarity,
     sparse_similarity,
 )
-from rag.models.rerank import RerankerModel
-from rag.utils.types import Chunk, Document, RetrievedChunk
+from models.rerank import RerankerVLLMModel
+from utils.types import Chunk, Document, RetrievedChunk
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -26,7 +30,7 @@ class KnowledgeBase:
     ) -> None:
         self.name = name
         self.db_path = (
-            Path(__file__).resolve().parent.parent.parent
+            Path(__file__).resolve().parent.parent.parent.parent
             / "data"
             / name
             / "vectordb.pkl"
@@ -37,6 +41,9 @@ class KnowledgeBase:
         self.dense_embeddings = []
         self.sparse_embeddings = []
         self.colbert_embeddings = []
+
+        # load
+        self.load()
 
     @property
     def is_empty(self) -> bool:
@@ -78,14 +85,15 @@ class KnowledgeBase:
 
         self.documents.extend(docs)
         self.chunks.extend(chunks)
+        self.save()
 
     def search(
         self,
         query: str,
+        embedding_model: EmbeddingModel,
+        reranker_model: RerankerVLLMModel,
         top_k: int = 20,
         top_r: int = 10,
-        embedding_model: EmbeddingModel = None,
-        reranker_model: RerankerModel = None,
         threshold: float = 1,
     ) -> list[RetrievedChunk]:
         """Hybrid Search with Reranking"""
@@ -134,7 +142,7 @@ class KnowledgeBase:
 
     def _get_embedding(
         self, texts: list[str], embedding_model: EmbeddingModel
-    ) -> tuple[np.ndarray, ...]:
+    ) -> tuple[DenseEmbeddings, SparseEmbeddings, ColbertEmbeddings]:
         result = embedding_model.encode(
             texts, return_dense=True, return_sparse=True, return_colbert=True
         )
@@ -145,7 +153,28 @@ class KnowledgeBase:
     #     return self._get_embedding([text])[0]
 
     def save(self) -> None:
-        raise NotImplementedError()
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        data = {
+            "documents": self.documents,
+            "chunks": self.chunks,
+            "dense_embeddings": self.dense_embeddings,
+            "sparse_embeddings": self.sparse_embeddings,
+            "colbert_embeddings": self.colbert_embeddings,
+        }
+        with open(self.db_path, "wb") as f:
+            pickle.dump(data, f)
+        logger.debug(f"Saved KnowledgeBase state to {self.db_path}")
 
     def load(self) -> None:
-        raise NotImplementedError()
+        if self.db_path.exists():
+            with open(self.db_path, "rb") as f:
+                data = pickle.load(f)
+            self.documents = data.get("documents", [])
+            self.chunks = data.get("chunks", [])
+            self.dense_embeddings = data.get("dense_embeddings", [])
+            self.sparse_embeddings = data.get("sparse_embeddings", [])
+            self.colbert_embeddings = data.get("colbert_embeddings", [])
+            logger.debug(f"Loaded KnowledgeBase state from {self.db_path}")
+        else:
+            self.db_path.parent.mkdir(parents=True, exist_ok=True)
+            logger.debug(f"No saved state found at {self.db_path}")

@@ -2,9 +2,10 @@ import time
 
 import gradio as gr
 
-from rag.rag.vectordb import KnowledgeBase
-from rag.ui.logic import ask
-from rag.utils.types import RetrievedChunk
+from rag.vectordb import KnowledgeBase
+from settings import settings
+from ui.logic import ask
+from utils.types import RetrievedChunk
 
 
 def launch() -> None:
@@ -181,8 +182,11 @@ def launch() -> None:
             )
 
     demo.queue(api_open=False).launch(
-        inbrowser=True, max_file_size="300mb", share=True
+        inbrowser=True,
+        max_file_size="300mb",
+        share=settings.ENVIRONMENT == "prod",
     )
 
 
-launch()
+if __name__ == "__main__":
+    launch()

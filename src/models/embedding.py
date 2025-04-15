@@ -1,19 +1,16 @@
 from threading import Lock
-from typing import Literal, Optional, TypeVar
+from typing import Literal, Optional
 
 import numpy as np
 import torch
 from FlagEmbedding import BGEM3FlagModel
 
-from rag.settings import settings
-from rag.utils.helpers import SingletonMeta
+from settings import settings
+from utils.helpers import SingletonMeta
 
-
-N = TypeVar("N", bound="int")
-
-DenseEmbeddings = np.ndarray[np.float16, tuple[N, Literal[1024]]]
+DenseEmbeddings = np.ndarray
 SparseEmbeddings = list[dict[str, float]]
-ColbertEmbeddings = list[np.ndarray[np.float16, tuple[N, Literal[1024]]]]
+ColbertEmbeddings = list[np.ndarray]
 
 
 class EmbeddingModel(metaclass=SingletonMeta):
@@ -43,6 +40,8 @@ class EmbeddingModel(metaclass=SingletonMeta):
         Literal["dense", "sparse", "colbert"],
         Optional[DenseEmbeddings | SparseEmbeddings | ColbertEmbeddings],
     ]:
+        assert self._model, "Model should be instantiated first"
+
         with self._lock:
             result = self._model.encode(
                 sentences,
