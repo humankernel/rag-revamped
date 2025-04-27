@@ -6,13 +6,13 @@ from uuid import uuid4
 import pymupdf  # temporal
 from docling.chunking import HybridChunker
 from docling.document_converter import DocumentConverter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
+from lib.types import Chunk, Document
 from settings import settings
-from utils.helpers import SingletonMeta
-from utils.types import Chunk, Document
 
 
-class LoadDocuments(metaclass=SingletonMeta):
+class LoadDocuments:
     _converter = None
     _chunker = None
     _lock: Lock = Lock()
@@ -62,7 +62,11 @@ class LoadDocuments(metaclass=SingletonMeta):
 
 # TODO: temporal code until docling
 def load_documents(
-    paths: list[str], splitter
+    paths: list[str],
+    splitter=RecursiveCharacterTextSplitter(
+        chunk_size=1200,
+        chunk_overlap=200,
+    ),
 ) -> tuple[list[Document], list[Chunk]]:
     assert all(os.path.isfile(path) for path in paths), (
         f"Every document path should point to an existing file: {paths}"
@@ -98,17 +102,4 @@ def load_documents(
                     if text.strip()
                 )
                 chunks.extend(page_chunks)
-
     return docs, chunks
-
-
-# from langchain.text_splitter import RecursiveCharacterTextSplitter
-# docs, chunks = load_documents(
-#     ["docs/attention-is-all-you-need.pdf"],
-#     splitter=RecursiveCharacterTextSplitter(
-#         chunk_size=1200,
-#         chunk_overlap=200,
-#     ),
-# )
-# print(docs)
-# print(chunks)

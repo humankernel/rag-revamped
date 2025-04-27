@@ -1,15 +1,11 @@
-❯ uv run tests/benchmarks/benchmark_embedding.py 
-Benchmarking with short input:
+=== BATCH: 32 ===
 
 Benchmarking with 2 sentences, batch_size=32
-You're using a XLMRobertaTokenizerFast tokenizer. Please note that with a fast tokenizer, using the `__call__` method is faster than using a method to encode the text followed by a call to the `pad` method to get a padded encoding.
 Dense only: 0.0261s (avg over 10 runs)
 Sparse only: 0.0263s (avg over 10 runs)
 Colbert only: 0.0264s (avg over 10 runs)
 Dense + Sparse: 0.0274s (avg over 10 runs)
 All (Dense + Sparse + Colbert): 0.0271s (avg over 10 runs)
-
-Benchmarking with longer input:
 
 Benchmarking with 100 sentences, batch_size=32
 Dense only: 0.1618s (avg over 10 runs)
@@ -17,7 +13,6 @@ Sparse only: 0.1764s (avg over 10 runs)
 Colbert only: 0.1666s (avg over 10 runs)
 Dense + Sparse: 0.1791s (avg over 10 runs)
 All (Dense + Sparse + Colbert): 0.1839s (avg over 10 runs)
-Benchmarking with very long input:
 
 Benchmarking with 1000 sentences, batch_size=32
 Dense only: 1.5664s (avg over 10 runs)
@@ -26,23 +21,14 @@ Colbert only: 1.6218s (avg over 10 runs)
 Dense + Sparse: 1.7259s (avg over 10 runs)
 All (Dense + Sparse + Colbert): 1.7538s (avg over 10 runs)
 
-
-=====
-
-preallocating memory with numpy for dense embeddings
-
-❯ uv run tests/benchmarks/benchmark_embedding.py 
-Benchmarking with short input:
+=== BATCH: 32 + preallocating memory with numpy for dense embeddings
 
 Benchmarking with 2 sentences, batch_size=32
-You're using a XLMRobertaTokenizerFast tokenizer. Please note that with a fast tokenizer, using the `__call__` method is faster than using a method to encode the text followed by a call to the `pad` method to get a padded encoding.
 Dense only: 0.0259s (avg over 10 runs)
 Sparse only: 0.0302s (avg over 10 runs)
 Colbert only: 0.0265s (avg over 10 runs)
 Dense + Sparse: 0.0268s (avg over 10 runs)
 All (Dense + Sparse + Colbert): 0.0267s (avg over 10 runs)
-
-Benchmarking with longer input:
 
 Benchmarking with 100 sentences, batch_size=32
 Dense only: 0.1614s (avg over 10 runs)
@@ -50,7 +36,6 @@ Sparse only: 0.1731s (avg over 10 runs)
 Colbert only: 0.1645s (avg over 10 runs)
 Dense + Sparse: 0.1752s (avg over 10 runs)
 All (Dense + Sparse + Colbert): 0.1786s (avg over 10 runs)
-Benchmarking with very long input:
 
 Benchmarking with 1000 sentences, batch_size=32
 Dense only: 1.4992s (avg over 10 runs)
@@ -59,22 +44,14 @@ Colbert only: 1.5911s (avg over 10 runs)
 Dense + Sparse: 1.6820s (avg over 10 runs)
 All (Dense + Sparse + Colbert): 1.7125s (avg over 10 runs)
 
-===
-
-prealloc + batch_size=64
-
-❯ uv run tests/benchmarks/benchmark_embedding.py 
-Benchmarking with short input:
+=== BATCH 64 + preallocating memory with numpy for dense embeddings ===
 
 Benchmarking with 2 sentences, batch_size=64
-You're using a XLMRobertaTokenizerFast tokenizer. Please note that with a fast tokenizer, using the `__call__` method is faster than using a method to encode the text followed by a call to the `pad` method to get a padded encoding.
 Dense only: 0.0267s (avg over 10 runs)
 Sparse only: 0.0260s (avg over 10 runs)
 Colbert only: 0.0264s (avg over 10 runs)
 Dense + Sparse: 0.0259s (avg over 10 runs)
 All (Dense + Sparse + Colbert): 0.0264s (avg over 10 runs)
-
-Benchmarking with longer input:
 
 Benchmarking with 100 sentences, batch_size=64
 Dense only: 0.1270s (avg over 10 runs)
@@ -82,7 +59,6 @@ Sparse only: 0.1369s (avg over 10 runs)
 Colbert only: 0.1306s (avg over 10 runs)
 Dense + Sparse: 0.1390s (avg over 10 runs)
 All (Dense + Sparse + Colbert): 0.1418s (avg over 10 runs)
-Benchmarking with very long input:
 
 Benchmarking with 1000 sentences, batch_size=64
 Dense only: 1.3109s (avg over 10 runs)
@@ -91,11 +67,7 @@ Colbert only: 1.3845s (avg over 10 runs)
 Dense + Sparse: 1.4618s (avg over 10 runs)
 All (Dense + Sparse + Colbert): 1.4945s (avg over 10 runs)
 
-===
-
-prealloc + batch_size=256
-
-Benchmarking with short input:
+=== BATCH 256 + preallocating memory with numpy for dense embeddings ===
 
 Benchmarking with 2 sentences, batch_size=256
 Dense only: 0.0254s (avg over 10 runs)
@@ -104,15 +76,12 @@ Colbert only: 0.0257s (avg over 10 runs)
 Dense + Sparse: 0.0266s (avg over 10 runs)
 All (Dense + Sparse + Colbert): 0.0266s (avg over 10 runs)
 
-Benchmarking with longer input:
-
 Benchmarking with 100 sentences, batch_size=256
 Dense only: 0.1177s (avg over 10 runs)
 Sparse only: 0.1292s (avg over 10 runs)
 Colbert only: 0.1182s (avg over 10 runs)
 Dense + Sparse: 0.1285s (avg over 10 runs)
 All (Dense + Sparse + Colbert): 0.1312s (avg over 10 runs)
-Benchmarking with very long input:
 
 Benchmarking with 1000 sentences, batch_size=256
 Dense only: 1.0625s (avg over 10 runs)

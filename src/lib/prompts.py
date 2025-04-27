@@ -2,9 +2,9 @@ from typing import TypedDict, Final
 
 
 class Prompt(TypedDict):
-    system_prompt: str
-    error_prompt: str
+    query_plan: str
     generate_answer: str
+    validate_answer: str
 
 
 # TODO: add deepseek recomendation if math
@@ -12,15 +12,16 @@ class Prompt(TypedDict):
 # we recommend enforcing the model to initiate its response with "<think>\n" at the beginning of every output
 
 PROMPT: Final[Prompt] = {
-    "system_prompt": "You are a friendly chatbot",
-    "error_prompt": "Sorry, an error occurred while processing your request",
+    "query_plan": (
+        "Break the query into comprehensive sub-queries for research:\n"
+        "**Query**:\n {query} \n\n"
+        "Consider:\n"
+        "1. Different aspects of the question\n"
+        "2. Possible interpretations\n"
+        "3. Related concepts\n"
+    ),
     "generate_answer": (
-        ""
         "Generate a clear, concise, and well-supported answer to the given query using the provided document context. Cite sources explicitly using [Doc X] notation.\n\n"
-        "**Context**:\n"
-        "{context}\n\n"
-        "**Query**:\n"
-        "{query}\n\n"
         "**Guidelines**:\n"
         "1. The answer must be factually grounded in the provided documents.\n"
         "2. Use citations where applicable (e.g., 'According to e.g: [Doc 1], ...').\n"
@@ -42,5 +43,13 @@ PROMPT: Final[Prompt] = {
         '   "X technology is the best and will revolutionize the industry." (Lacks citations and specifics)\n\n'
         "**Final Output**:\n"
         "Provide a well-structured answer following the above guidelines."
+        "**Context**:\n {context}\n\n"
+        "**Query**:\n {query}\n\n"
+    ),
+    "validate_answer": (
+        "Verify if this answer fully addresses the question: \n"
+        "Question: {query}\n"
+        "Answer: {answer}\n"
+        "Identify missing information or uncertainties. List up to 3 key gaps:"
     ),
 }

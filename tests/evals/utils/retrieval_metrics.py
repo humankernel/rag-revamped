@@ -1,9 +1,7 @@
 import numpy as np
 
 
-def calc_precision(
-    preds: list[list[int]], truths: list[list[int]], cutoffs: list[int]
-) -> np.ndarray:
+def calc_precision(preds: list[list[int]], truths: list[list[int]], cutoffs: list[int]) -> np.ndarray:
     """Precision@k: Ratio of relevant documents among the retrived documents
 
     Args:
@@ -27,9 +25,7 @@ def calc_precision(
     return precision
 
 
-def calc_recall(
-    preds: list[list[int]], truths: list[list[int]], cutoffs: list[int]
-) -> np.ndarray:
+def calc_recall(preds: list[list[int]], truths: list[list[int]], cutoffs: list[int]) -> np.ndarray:
     """Recall@k: Ratio of relevant documents among the total documents
 
     Args:
@@ -53,9 +49,7 @@ def calc_recall(
     return recalls
 
 
-def calc_mrr(
-    preds: list[list[int]], truths: list[list[int]], cutoffs: list[int]
-):
+def calc_mrr(preds: list[list[int]], truths: list[list[int]], cutoffs: list[int]):
     """Mean Reciprocal Rank: Measures the rank position of the first relevant result
 
     Args:
@@ -83,9 +77,7 @@ def calc_mrr(
     return MRRs
 
 
-def calc_ndcg(
-    preds: list[list[int]], truths: list[list[int]], cutoffs: list[int]
-):
+def calc_ndcg(preds: list[list[int]], truths: list[list[int]], cutoffs: list[int]):
     """Normalized Discounted Cumulative Gain: Ranking quality of all retrieved documents considering both order and relevance
 
     Args:
@@ -111,9 +103,7 @@ def calc_ndcg(
 
             # Ideal DCG (IDCG)
             ideal_hits = min(len(truth_set), k)
-            idcg = sum(
-                1.0 / np.log2(rank + 1) for rank in range(1, ideal_hits + 1)
-            )
+            idcg = sum(1.0 / np.log2(rank + 1) for rank in range(1, ideal_hits + 1))
 
             ndcg = dcg / idcg if idcg > 0 else 0.0
             ndcgs[i] += ndcg
@@ -122,9 +112,7 @@ def calc_ndcg(
     return ndcgs
 
 
-def calc_map(
-    preds: list[list[int]], truths: list[list[int]], cutoffs: list[int]
-) -> np.ndarray:
+def calc_map(preds: list[list[int]], truths: list[list[int]], cutoffs: list[int]) -> np.ndarray:
     """Mean Average Precision
 
     Args:

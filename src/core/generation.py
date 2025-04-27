@@ -1,13 +1,16 @@
 from typing import Generator
 
-from models.llm import LLMModel
+from lib.models.llm import OpenAIClient, vLLMClient
+from lib.types import ChatMessage, RetrievedChunk
 from settings import settings
-from utils.types import ChatMessage, RetrievedChunk
 
 
 def compress_history(
     history: list[ChatMessage], max_tokens: int = settings.CTX_WINDOW
 ) -> list[ChatMessage]:
+    if not history:
+        return []
+
     # TODO: Enhance to keep only relevant previous messages
     relevant_history = []
     total_tokens = 0
@@ -23,26 +26,25 @@ def compress_history(
 def compress_context(
     chunks: list[RetrievedChunk], max_tokens: int = settings.CTX_WINDOW
 ) -> str:
+    if not chunks:
+        return ""
+
     # TODO: Use LLM to refine context instead of simple truncation
     formatted = [
         f"[Doc {i + 1}] {chunk.chunk.text}" for i, chunk in enumerate(chunks)
     ]
     context = "\n\n".join(formatted)
     return context[: max_tokens * 4]
-    # todo: instead use LLM to clean the context
 
 
 def create_prompt(query: str, history: list[ChatMessage], context: str) -> str:
-    def format_chat_messages(messages: list[ChatMessage]) -> str:
-        prompt = ""
-        for msg in messages:
-            if msg["role"] == "system" or msg["role"] == "assistant":
-                prompt += f"<|Assistant|> {msg['content']}\n\n"
-            elif msg["role"] == "user":
-                prompt += f"<|User|> {msg['content']}\n\n"
-        return prompt
+    prompt = ""
+    for msg in history:
+        if msg["role"] == "system" or msg["role"] == "assistant":
+            prompt += f"<|Assistant|> {msg['content']}\n\n"
+        elif msg["role"] == "user":
+            prompt += f"<|User|> {msg['content']}\n\n"
 
-    prompt = format_chat_messages(history)
     prompt += f"<|User|> {query}\n\n"
 
     if context:
@@ -65,18 +67,20 @@ def generate_answer(
     query: str,
     history: list[ChatMessage],
     chunks: list[RetrievedChunk],
-    model: LLMModel,
-    model_params: dict,
+    model: vLLMClient | OpenAIClient,
+    params: dict,
 ) -> Generator[str, None, None]:
     assert all(isinstance(msg["content"], str) for msg in history), (
         f"History content must be strings: {history}"
     )
 
-    relevant_history = compress_history(history)
-    relevant_context = compress_context(chunks)
+    compressed_history = compress_history(history)
+    compressed_context = compress_context(chunks)
     prompt = create_prompt(
-        query=query, history=relevant_history, context=relevant_context
+        query=query,
+        history=compressed_history,
+        context=compressed_context,
     )
 
-    for response in model.generate_stream(prompt, model_params):
+    for response in model.generate_stream(prompt, params):
         yield response

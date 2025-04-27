@@ -1,5 +1,6 @@
 import timeit
-from rag.models.embedding import EmbeddingModel
+
+from lib.models.embedding import EmbeddingModel
 
 
 def benchmark_embedding_model(
@@ -17,9 +18,7 @@ def benchmark_embedding_model(
         time_taken = timeit.timeit(wrapper, number=num_runs) / num_runs
         print(f"{name}: {time_taken:.4f}s (avg over {num_runs} runs)")
 
-    print(
-        f"\nBenchmarking with {len(sentences)} sentences, batch_size={batch_size}"
-    )
+    print(f"\nBenchmarking with {len(sentences)} sentences, batch_size={batch_size}")
 
     # Warm-up
     for _ in range(3):
@@ -70,16 +69,19 @@ def benchmark_embedding_model(
 
 if __name__ == "__main__":
     model = EmbeddingModel()
+
     sentences_short = [
         "BGE M3 is an embedding model supporting dense retrieval.",
         "BM25 is a bag-of-words retrieval function.",
-    ]
-    sentences_long = sentences_short * 50  # 100 sentences
-    sentences_long_long = sentences_long * 10  # 1000 sentences
+    ] # 2 sentences ~ 24 tokens
+    sentences_long = sentences_short * 50  # 100 sentences ~ 1249 tokens
+    sentences_long_long = sentences_long * 10  # 1000 sentences ~ 12499 tokens
 
-    print("Benchmarking with short input:")
+    print("=== Benchmark (short input) ===\n")
     benchmark_embedding_model(model, sentences_short, batch_size=32)
-    print("\nBenchmarking with longer input:")
+
+    print("=== Benchmark (longer input) ===\n")
     benchmark_embedding_model(model, sentences_long, batch_size=32)
-    print("Benchmarking with very long input:")
+
+    print("=== Benchmark (very long input) ===\n")
     benchmark_embedding_model(model, sentences_long_long, batch_size=32)

@@ -1,5 +1,5 @@
 
-- [ ] eval retrieval
+- [x] eval retrieval
 - [ ] eval generation (individual)
 - [ ] eval generation (end-to-end)
 

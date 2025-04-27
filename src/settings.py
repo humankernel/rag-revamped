@@ -16,7 +16,7 @@ class Settings(BaseModel):
         "LLM_MODEL", "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"
     )
     DTYPE: str = os.getenv("DTYPE", "float16")
-    CTX_WINDOW: int = 8192
+    CTX_WINDOW: int = int(os.getenv("CTX_WINDOW", "8192"))
     TORCH_DEVICE: Optional[Literal["cuda", "cpu"]] = None
     ENVIRONMENT: str | Literal["dev", "prod"] = os.getenv("ENVIRONMENT", "prod")
     CLIENT_URL: str = os.getenv("CLIENT_URL", "http://localhost:8000/v1")

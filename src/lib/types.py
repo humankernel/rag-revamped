@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Literal, NotRequired, Optional, TypedDict
+from typing import Literal, NotRequired, TypedDict
 
 from pydantic import BaseModel
 
@@ -9,10 +9,16 @@ class Message(TypedDict):
     files: list[str]
 
 
+class ChatMetadata(TypedDict):
+    title: str
+    duration: NotRequired[float]
+    status: Literal["pending", "done"]
+
+
 class ChatMessage(TypedDict):
     role: Literal["system", "user", "assistant"]
     content: str
-    metadata: NotRequired[Optional[dict]]
+    metadata: NotRequired[ChatMetadata]
 
 
 class Metadata(TypedDict):
@@ -37,13 +43,16 @@ class Scores(TypedDict):
     sparse_score: float
     colbert_score: float
     hybrid_score: float
-    rerank_score: float
+    rerank_score: float | None 
 
 
 @dataclass
 class RetrievedChunk:
     chunk: Chunk
     scores: Scores
+
+    def __hash__(self):
+        return hash(self.chunk.id)
 
     def __repl__(self) -> str:
         return (
