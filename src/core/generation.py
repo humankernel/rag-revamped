@@ -8,9 +8,6 @@ from settings import settings
 def compress_history(
     history: list[ChatMessage], max_tokens: int = settings.CTX_WINDOW
 ) -> list[ChatMessage]:
-    if not history:
-        return []
-
     # TODO: Enhance to keep only relevant previous messages
     relevant_history = []
     total_tokens = 0
@@ -26,9 +23,6 @@ def compress_history(
 def compress_context(
     chunks: list[RetrievedChunk], max_tokens: int = settings.CTX_WINDOW
 ) -> str:
-    if not chunks:
-        return ""
-
     # TODO: Use LLM to refine context instead of simple truncation
     formatted = [
         f"[Doc {i + 1}] {chunk.chunk.text}" for i, chunk in enumerate(chunks)
@@ -65,22 +59,17 @@ def create_prompt(query: str, history: list[ChatMessage], context: str) -> str:
 
 def generate_answer(
     query: str,
-    history: list[ChatMessage],
-    chunks: list[RetrievedChunk],
+    history: list[ChatMessage] | None,
+    chunks: list[RetrievedChunk] | None,
     model: vLLMClient | OpenAIClient,
-    params: dict,
+    params: dict = {},
 ) -> Generator[str, None, None]:
-    assert all(isinstance(msg["content"], str) for msg in history), (
-        f"History content must be strings: {history}"
-    )
-
-    compressed_history = compress_history(history)
-    compressed_context = compress_context(chunks)
+    history = compress_history(history) if history else []
+    context = compress_context(chunks) if chunks else ""
     prompt = create_prompt(
         query=query,
-        history=compressed_history,
-        context=compressed_context,
+        history=history,
+        context=context,
     )
 
-    for response in model.generate_stream(prompt, params):
-        yield response
+    yield from model.generate_stream(prompt, params)

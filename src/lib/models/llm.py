@@ -1,5 +1,6 @@
-from typing import Generator, NotRequired, Type, TypedDict
+from typing import Generator, NotRequired, Optional, Type, TypedDict
 
+from pytest import param
 import vllm
 from openai import OpenAI
 from pydantic import BaseModel
@@ -36,12 +37,12 @@ class OpenAIClient:
     def generate(
         self,
         prompt: str,
-        output_format: Type[BaseModel] | None = None,
-        params: GenerationParams = DEFAULT_PARAMS,
+        output_format: Type[BaseModel] | None,
+        params: GenerationParams | None,
     ) -> str | BaseModel:
         assert count_tokens(prompt) < settings.CTX_WINDOW, "Prompt too large!!"
 
-        params = {**DEFAULT_PARAMS, **params}
+        params = params if params else DEFAULT_PARAMS
         response = self.model.chat.completions.create(
             messages=[{"role": "assistant", "content": prompt}],
             model=settings.LLM_MODEL,
@@ -60,11 +61,11 @@ class OpenAIClient:
     def generate_stream(
         self,
         prompt: str,
-        params: GenerationParams = DEFAULT_PARAMS,
+        params: GenerationParams | None,
     ) -> Generator[str, None, None]:
         assert count_tokens(prompt) < settings.CTX_WINDOW, "Prompt too large!!"
 
-        params = {**DEFAULT_PARAMS, **params}
+        params = params if params else DEFAULT_PARAMS
         response = self.model.chat.completions.create(
             messages=[{"role": "assistant", "content": prompt}],
             model=settings.LLM_MODEL,

@@ -1,6 +1,6 @@
 import numpy as np
 
-from retrieval_metrics import (
+from tests.evals.metrics import (
     calc_precision,
     calc_recall,
     calc_mrr,
@@ -8,9 +8,6 @@ from retrieval_metrics import (
     calc_map,
 )
 
-# Replace `your_module_name` with the actual file name (without `.py`) if needed.
-
-# Example predictions and truths
 preds = [[1, 2, 3, 4], [3, 2, 1, 4]]
 truths = [[3], [1]]
 cutoffs = [1, 3, 4]

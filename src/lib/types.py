@@ -1,7 +1,8 @@
 from dataclasses import dataclass
+import time
 from typing import Literal, NotRequired, TypedDict
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class Message(TypedDict):
@@ -27,8 +28,10 @@ class Metadata(TypedDict):
 
 class Document(BaseModel):
     id: str
+    title: str = Field(default="unknown")
+    language: str = Field(default="en")
     source: str
-    metadata: Metadata
+    metadata: Metadata = Field(default={"created_at": f"{time.time()}"})
 
 
 class Chunk(BaseModel):
@@ -43,7 +46,7 @@ class Scores(TypedDict):
     sparse_score: float
     colbert_score: float
     hybrid_score: float
-    rerank_score: float | None 
+    rerank_score: float | None
 
 
 @dataclass
