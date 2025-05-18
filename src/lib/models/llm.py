@@ -1,25 +1,16 @@
-from typing import Generator, NotRequired, Optional, Type, TypedDict
+from typing import Generator, Type
 
-from pytest import param
 import vllm
 from openai import OpenAI
 from pydantic import BaseModel
 from vllm.sampling_params import GuidedDecodingParams
 
 from lib.helpers import count_tokens
+from lib.types import GenerationParams
 from settings import settings
 
-
-class GenerationParams(TypedDict):
-    max_tokens: NotRequired[int]
-    temperature: NotRequired[float]
-    top_p: NotRequired[float]
-    frequency_penalty: NotRequired[float]
-    presence_penalty: NotRequired[float]
-
-
 DEFAULT_PARAMS: GenerationParams = {
-    "max_tokens": 100,
+    "max_tokens": 500,
     "temperature": 0.25,
     "top_p": 0.95,
     "frequency_penalty": 0.5,
@@ -38,11 +29,12 @@ class OpenAIClient:
         self,
         prompt: str,
         output_format: Type[BaseModel] | None,
-        params: GenerationParams | None,
-    ) -> str | BaseModel:
-        assert count_tokens(prompt) < settings.CTX_WINDOW, "Prompt too large!!"
+        params: GenerationParams = {},
+    ) -> str:
+        assert count_tokens(prompt) < settings.CTX_WINDOW
+        assert prompt
 
-        params = params if params else DEFAULT_PARAMS
+        params = DEFAULT_PARAMS | params
         response = self.model.chat.completions.create(
             messages=[{"role": "assistant", "content": prompt}],
             model=settings.LLM_MODEL,
@@ -51,21 +43,17 @@ class OpenAIClient:
             else None,
             **params,
         )
-        response = response.choices[0].message.content or ""
-
-        if output_format:
-            return output_format.model_validate_json(response)
-
-        return response
+        return response.choices[0].message.content or ""
 
     def generate_stream(
         self,
         prompt: str,
-        params: GenerationParams | None,
+        params: GenerationParams = {},
     ) -> Generator[str, None, None]:
-        assert count_tokens(prompt) < settings.CTX_WINDOW, "Prompt too large!!"
+        assert count_tokens(prompt) < settings.CTX_WINDOW
+        assert prompt
 
-        params = params if params else DEFAULT_PARAMS
+        params = DEFAULT_PARAMS | params
         response = self.model.chat.completions.create(
             messages=[{"role": "assistant", "content": prompt}],
             model=settings.LLM_MODEL,
@@ -94,11 +82,12 @@ class vLLMClient:
         self,
         prompt: str,
         output_format: Type[BaseModel] | None = None,
-        params: GenerationParams = DEFAULT_PARAMS,
-    ) -> str | BaseModel:
-        assert count_tokens(prompt) < settings.CTX_WINDOW, "Prompt too large!!"
-
-        params = {**DEFAULT_PARAMS, **params}
+        params: GenerationParams = {},
+    ) -> str:
+        assert count_tokens(prompt) < settings.CTX_WINDOW
+        assert prompt
+    
+        params = DEFAULT_PARAMS | params
         response = self.model.generate(
             prompt,
             sampling_params=vllm.SamplingParams(
@@ -110,21 +99,17 @@ class vLLMClient:
                 else None,
             ),
         )
-        response = response[0].outputs[0].text
-
-        if output_format:
-            return output_format.model_validate_json(response)
-
-        return response
+        return response[0].outputs[0].text
 
     def generate_stream(
         self,
         prompt: str,
-        params: GenerationParams = DEFAULT_PARAMS,
+        params: GenerationParams = {},
     ) -> Generator[str, None, None]:
-        assert count_tokens(prompt) < settings.CTX_WINDOW, "Prompt too large!!"
+        assert count_tokens(prompt) < settings.CTX_WINDOW
+        assert prompt
 
-        params = {**DEFAULT_PARAMS, **params}
+        params = DEFAULT_PARAMS | params
         response = self.model.generate(
             prompt, sampling_params=vllm.SamplingParams(**params)
         )
