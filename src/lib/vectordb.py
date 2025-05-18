@@ -17,12 +17,11 @@ from lib.models.embedding import (
 from lib.models.rerank import RerankerModel
 from lib.types import Chunk, Document, RetrievedChunk
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
+log = logging.getLogger("rag")
 
 class KnowledgeBase:
     def __init__(self, name: str, test: bool = False) -> None:
+        assert name
         self.name = name
         self.db_path = (
             Path(__file__).resolve().parent.parent.parent
@@ -31,13 +30,11 @@ class KnowledgeBase:
             / "vectordb.pkl"
         )
         self.test = test
-        # data
-        self.documents = []
-        self.chunks = []
+        self.documents: list[Document] = []
+        self.chunks: list[Chunk] = []
         self.dense_embeddings: NDArray | None = None
         self.sparse_embeddings: list[dict[str, float]] | None = None
         self.colbert_embeddings: list[NDArray] | None = None
-        # load
         if not self.test:
             self.load()
 
@@ -55,8 +52,9 @@ class KnowledgeBase:
         assert len(docs) > 0 and len(chunks) > 0
         assert all(isinstance(d, Document) for d in docs)
         assert all(isinstance(c, Chunk) for c in chunks)
+        assert embedding_model
 
-        logger.debug(f"Embedding {len(docs)} chunks.")
+        log.debug(f"Embedding {len(docs)} chunks.")
 
         start = time.time()
         result = embedding_model.encode(
@@ -66,7 +64,7 @@ class KnowledgeBase:
             return_colbert=True,
             batch_size=batch_size,
         )
-        logger.debug(
+        log.debug(
             f"Finished embedding {len(docs)} chunks in {time.time() - start}"
         )
 
@@ -172,7 +170,7 @@ class KnowledgeBase:
         }
         with open(self.db_path, "wb") as f:
             pickle.dump(data, f)
-        logger.debug(f"Saved KnowledgeBase state to {self.db_path}")
+        log.debug(f"Saved KnowledgeBase state to {self.db_path}")
 
     def load(self) -> None:
         if self.db_path.exists():
@@ -183,7 +181,7 @@ class KnowledgeBase:
             self.dense_embeddings = data.get("dense_embeddings", [])
             self.sparse_embeddings = data.get("sparse_embeddings", [])
             self.colbert_embeddings = data.get("colbert_embeddings", [])
-            logger.debug(f"Loaded KnowledgeBase state from {self.db_path}")
+            log.debug(f"Loaded KnowledgeBase state from {self.db_path}")
         else:
             self.db_path.parent.mkdir(parents=True, exist_ok=True)
-            logger.debug(f"No saved state found at {self.db_path}")
+            log.debug(f"No saved state found at {self.db_path}")
