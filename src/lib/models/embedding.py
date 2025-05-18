@@ -31,8 +31,12 @@ class EmbeddingModel:
         return_sparse: bool = False,
         return_colbert: bool = False,
         batch_size: int = 32,
-        **kwargs,
+        **kwargs: dict,
     ) -> EmbeddingOutput:
+        assert isinstance(sentences, list)
+        assert len(sentences) > 0
+        assert return_dense or return_sparse or return_colbert
+
         result = self._model.encode(
             sentences,
             batch_size=batch_size,
@@ -69,6 +73,7 @@ def dense_similarity(
     scores = e1 @ e2.T
     return scores
 
+
 # BUG: evaluate a better way to compute this similarity
 def sparse_similarity(
     lexical_weights_1: list[dict[str, float]],
@@ -97,16 +102,9 @@ def colbert_similarity(
     query_embs: list[NDArray],
     passage_embs: list[NDArray],
 ) -> torch.Tensor:
-    """
-    Computes ColBERT-style similarity between queries and passages.
+    assert  isinstance(query_embs, list)
+    assert  isinstance(passage_embs, list)
 
-    Args:
-        query_embs: List of (n_query_tokens, dim) arrays
-        passage_embs: List of (n_passage_tokens, dim) arrays
-
-    Returns:
-        torch.Tensor: Similarity matrix of shape (n_queries, n_passages)
-    """
     # Convert to tensors and get lengths
     queries = [torch.from_numpy(e).float() for e in query_embs]
     passages = [torch.from_numpy(e).float() for e in passage_embs]
