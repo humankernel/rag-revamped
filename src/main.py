@@ -1,3 +1,4 @@
+import logging
 import time
 
 import gradio as gr
@@ -7,10 +8,22 @@ from lib.types import RetrievedChunk
 from lib.vectordb import KnowledgeBase
 from settings import settings
 
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s | %(levelname)-8s | %(name)s | %(filename)s:%(lineno)d | %(funcName)s() | %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    filename="logs.log",
+    filemode="a",
+    encoding="utf-8",
+)
+log = logging.getLogger("rag")
 
-def launch() -> None:
+
+def main() -> None:
+    log.info("Starting RAG in %s mode", settings.ENVIRONMENT)
+
     with gr.Blocks(fill_height=True) as demo:
-        db = gr.State(KnowledgeBase("att"))
+        db = gr.State(KnowledgeBase("att", test=True))
         local_storage = gr.BrowserState()
         chunks = gr.State([])
 
@@ -35,7 +48,7 @@ def launch() -> None:
             max_tokens = gr.Slider(
                 1,
                 4000,
-                value=512,
+                value=1024,
                 step=10,
                 label="Max Tokens",
                 info="Sets the maximum number of tokens in the response.",
@@ -172,10 +185,6 @@ def launch() -> None:
         max_file_size="300mb",
         share=settings.ENVIRONMENT == "prod",
     )
-
-
-def main() -> None:
-    launch()
 
 
 if __name__ == "__main__":
