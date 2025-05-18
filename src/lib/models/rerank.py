@@ -9,7 +9,6 @@ class RerankerModel:
         self._model = vllm.LLM(model=settings.RERANKER_MODEL, task="score")
 
     def compute_score(self, pairs: list[tuple[str, str]]) -> torch.Tensor:
-        assert self._model, "LLM model not initialized"
         assert all(
             isinstance(pair, tuple) and len(pair) == 2 for pair in pairs
         ), f"Pairs should be list of tuples of size 2: {pairs}"
