@@ -12,9 +12,7 @@ class Settings(BaseModel):
     EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "BAAI/bge-m3")
     EMBEDDING_TOKEN_LIMIT: int = 8190
     RERANKER_MODEL: str = os.getenv("RERANKER_MODEL", "BAAI/bge-reranker-v2-m3")
-    LLM_MODEL: str = os.getenv(
-        "LLM_MODEL", "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"
-    )
+    LLM_MODEL: str = os.getenv("LLM_MODEL", "Qwen/Qwen3-8B")
     DTYPE: str = os.getenv("DTYPE", "float16")
     CTX_WINDOW: int = int(os.getenv("CTX_WINDOW", "8192"))
     TORCH_DEVICE: Optional[Literal["cuda", "cpu"]] = None
