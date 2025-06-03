@@ -22,12 +22,6 @@ class ChatMessage(TypedDict):
     metadata: NotRequired[ChatMetadata]
 
 
-def system_msg(title: str, content: str = "") -> ChatMessage:
-    return ChatMessage(
-        role="assistant", content=content, metadata={"title": title}
-    )
-
-
 class Metadata(TypedDict):
     created_at: str
 
@@ -78,17 +72,21 @@ class RetrievedChunk:
 class QueryPlan(BaseModel):
     query: str = Field(
         default="",
-        description="Transform of the user's query into a standardized, clear version maintaining original intent.",
+        description=(
+            "Versión normalizada y clara de la consulta original, manteniendo la intención y el idioma del usuario."
+        ),
         examples=[
-            "What is the exact chemical process of ATP synthesis?",
-            "How does electron transport chain contribute to energy production?",
-            "What enzymes regulate cellular respiration phases?",
+            "¿Cuál es el proceso químico exacto de la síntesis de ATP?",
+            "¿Cómo contribuye la cadena de transporte de electrones a la producción de energía?",
+            "¿Qué enzimas regulan las fases de la respiración celular?",
         ],
     )
     sub_queries: list[str] = Field(
         default=[],
-        description="Break down of the original question into several simpler, more specific subquestions. "
-        "Each subquestion should focus on a different aspect needed to fully answer the original query.",
+        description=(
+            "Lista de subpreguntas más pequeñas, cada una enfocada en "
+            "un aspecto diferente de la consulta para cubrirla completamente."
+        ),
         examples=[
             "¿Cuáles son los efectos del cambio climático en la agricultura?",
             "¿Cómo varían estos efectos según la región o el tipo de cultivo?",
@@ -105,20 +103,30 @@ class QueryPlan(BaseModel):
 class GenerationState(BaseModel):
     answer: str = Field(
         default="",
-        description="Answer with inline citations [n] and reference list\n"
-        "Format:\nText [1]. More text [2].\n\n[1] Source text\n[2] Source text",
+        description=(
+            "Respuesta completa con citaciones en línea [0], [2], … y sección de referencias al final.\n"
+            "Formato:\n"
+            "Texto con hechos y citas [0]. Más texto explicativo [2].\n\n"
+            "[0] descripción de la referencia.\n"
+            "[2] descripción de la referencia."
+        ),
         examples=[
-            "Paris hosts the Eiffel Tower [1]. Construction completed in 1889 [2].\n\n"
-            "[1] Document 3: 'Major Paris landmarks...'\n"
-            "[2] Archive 5: '1889 World Fair records...'"
+            "La Torre Eiffel se completó en 1889 [1]. Es el monumento más visitado de París [2].\n\n"
+            "[1] Archivo Histórico de Francia: “Construcción de la Torre Eiffel”\n"
+            "[2] Ministerio de Turismo de Francia: “Estadísticas 2023”"
         ],
     )
     gaps: list[str] = Field(
         default_factory=list,
-        description="Unanswered sub-queries or missing citations (max 3)",
+        description=(
+            "Lista (máx. 3) de subpreguntas no respondidas o afirmaciones sin cita.\n"
+            "Ejemplos:\n"
+            "- “No se aborda la variación regional de los efectos climáticos.”\n"
+            "- “Falta fuente para el dato de crecimiento poblacional.”"
+        ),
         examples=[
-            "Sub-query 2 not addressed in documents",
-            "No source for maintenance cost claims",
+            "No se aborda la variación regional de los efectos climáticos.",
+            "Falta fuente para el dato de crecimiento poblacional.",
         ],
     )
 
