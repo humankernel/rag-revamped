@@ -14,60 +14,113 @@ class Prompt(TypedDict):
 
 log = logging.getLogger("rag")
 
-# TODO: add deepseek recomendation if math
-# Please reason step by step, and put your final answer within \boxed{}.
-# we recommend enforcing the model to initiate its response with "<think>\n" at the beginning of every output
+
 PROMPT: Final[Prompt] = {
     "query_plan": (
-        "Normaliza la consulta y descompónla en sub-preguntas:\n"
-        "Consulta:\n{query}\n\n"
-        "Considera:\n"
-        "1. Diferentes aspectos individuales entre sí de la pregunta.\n"
-        "2. Conceptos relacionados.\n"
-        "3. Mantén el idioma original.\n"
-        "Ejemplos:\n"
-        "Consulta:\n"
-        "cuales son los efectos del cambio climatico  en la agricultura. y hay alguna solucion actualmente?\n"
-        "{{ 'query': '¿Cuáles son los efectos del cambio climático en la agricultura y qué soluciones se están implementando?', "
-        "'sub_queries': [ '¿Cuáles son los efectos del cambio climático en la agricultura?', "
-        "'¿Cómo varían estos efectos según la región o el tipo de cultivo?', "
-        "'¿Qué soluciones se están implementando actualmente para mitigar estos efectos?' ] }}"
+        "<prompt>\n"
+        "  <instructions>\n"
+        "    <item>Normalizar la consulta (gramática, puntuación) sin cambiar el idioma.</item>\n"
+        "    <item>Descomponerla en subpreguntas específicas que cubran todos los ángulos.</item>\n"
+        "    <format>\n"
+        "      {{\n"
+        "        'query': '<consulta normalizada>',\n"
+        "        'sub_queries': [\n"
+        "          '<subpregunta 1>',\n"
+        "          '<subpregunta 2>',\n"
+        "          '<subpregunta 3>'\n"
+        "        ]\n"
+        "      }}\n"
+        "    </format>\n"
+        "  </instructions>\n"
+        "  <example>\n"
+        "    <query>cuales son los efectos del cambio climatico  en la agricultura. y hay alguna solucion actualmente?</query>\n"
+        "    <response>\n"
+        "      {{\n"
+        "        'query': '¿Cuáles son los efectos del cambio climático en la agricultura y qué soluciones existen actualmente?',\n"
+        "        'sub_queries': [\n"
+        "          '¿Cuáles son los efectos del cambio climático en la agricultura?',\n"
+        "          '¿Cómo varían estos efectos según la región o el tipo de cultivo?',\n"
+        "          '¿Qué soluciones se están implementando actualmente para mitigar estos efectos?'\n"
+        "        ]\n"
+        "      }}\n"
+        "    </response>\n"
+        "  </example>\n"
+        "  <input>\n"
+        "    <query>{query}</query>\n"
+        "  </input>\n"
+        "</prompt>\n"
+        "/nothink"
     ),
     "generate_answer": (
-        "Genera una respuesta con citaciones numéricas EN EL IDIOMA DEL USUARIO usando este formato:\n"
-        "1. Cada afirmación relevante lleva [n] al final\n"
-        "2. Lista de referencias al final con texto completo\n\n"
-        "**Instrucciones**:\n"
-        "1. Usar formato: Frase [1]. Otra frase [2].\n"
-        "2. Numeración consecutiva en toda la respuesta\n"
-        "3. Al final:\n"
-        "   [1] Texto completo del fragmento citado\n"
-        "   [2] Siguiente fragmento citado\n"
-        "4. Conservar el idioma original de la consulta\n"
-        "5. Máximo 5 citaciones por respuesta\n\n"
-        "**Ejemplo Español**:\n"
-        "Consulta: '¿Qué beneficios tiene X?'\n"
-        "Respuesta:\n"
-        "'X mejora la eficiencia operativa [1]. Además, reduce costos según estudios recientes [2].\n\n"
-        "[1] 'La tecnología X aumenta un 40% la productividad...'\n"
-        "[2] 'Estudio de 2023 muestra ahorros promedio de $2M...'\n\n"
-        "**English Example**:\n"
-        "Query: 'Technical advantages of Y'\n"
-        "Answer:\n"
-        "'Y demonstrates superior thermal resistance [1]. Its modular design allows quick deployment [2].\n\n"
-        "[1] 'Testing results: Y withstands 500°C for...'\n"
-        "[2] 'Assembly manual section 3.2: modular components...'\n\n"
-        "**Contexto**:\n {context}\n\n"
-        "**Consulta**:\n {query}\n\n"
+        "<prompt>\n"
+        "  <instructions>\n"
+        "    <item>Genera una respuesta en el idioma de la consulta.</item>\n"
+        "    <item>Cada afirmación relevante termina con [n], basado en los chunks que se hallan utilizados en la respuesta. </item>\n"
+        "    <item>Si no se provee de contexto o no es suficiente, NO INVENTES LA RESPUESTA, solo di que no hay contexto suficiente.</item>\n"
+        "    <format>\n"
+        "      Frase relevante [1]. Otra afirmación [2].\n"
+        "    </format>\n"
+        "  </instructions>\n\n"
+        "  <examples>\n"
+        '    <example lang="es">\n'
+        "      <context>[1] España, política económica reciente</context>\n"
+        "      <query>¿Qué beneficios tiene X?</query>\n"
+        "      <answer>\n"
+        "        X mejora la eficiencia operativa [1]. Además, reduce costos según estudios recientes [2].\n"
+        "      </answer>\n"
+        "    </example>\n\n"
+        '    <example lang="en">\n'
+        "      <context>Global manufacturing standards</context>\n"
+        "      <query>Technical advantages of Y</query>\n"
+        "      <answer>\n"
+        "        Y demonstrates superior thermal resistance [1]. Its modular design allows quick deployment [2].\n"
+        "      </answer>\n"
+        "    </example>\n"
+        "  </examples>\n\n"
+        "  <input>\n"
+        "    <context>\n"
+        "      {context}\n"
+        "    </context>\n"
+        "    <query>\n"
+        "      {query}\n"
+        "    </query>\n"
+        "  </input>\n"
+        "</prompt>\n"
+        "/nothink"
     ),
     "validate_answer": (
-        "Verificar:\n"
-        "1. Si la respuesta responde completamente la consulta.\n"
-        "2. Coincidencia numérica entre citaciones y referencias.\n"
-        "3. Formato bilingüe correcto.\n\n"
-        "Consulta: {query}\n"
-        "Respuesta: {answer}\n\n"
-        "Identifica la informacion faltante o inseguridad de la respuesta. Lista hasta 3 fallas si las hay."
+        "<prompt>\n"
+        "  <instructions>\n"
+        "    <item>Comprobar que la respuesta cubre completamente la consulta del usuario.</item>\n"
+        "    <item>Verificar que el número de citaciones en el texto coincide con la lista de referencias.</item>\n"
+        "    <item>Asegurar que el formato bilingüe (español/inglés) esté correcto.</item>\n"
+        "  </instructions>\n\n"
+        "  <format>\n"
+        "     {{\n"
+        "       'answer': '<Texto con citaciones en línea [1], [2], … y sección de referencias al final>',\n"
+        "       'gaps': [\n"
+        "         '<gap 1>',\n"
+        "         '<gap 2>',\n"
+        "         '<gap 3>'\n"
+        "       ]\n"
+        "     }}\n"
+        "  </format>\n\n"
+        "  <example>\n"
+        "    <query>¿Cuál es la población actual de Tokio y cómo ha cambiado en la última década?</query>\n"
+        "    <answer>\n"
+        "      La población de Tokio en 2025 es de 14 000 000 de habitantes [1]. En 2015 eran 13 500 000, "
+        "lo que supone un crecimiento del 3,7 % [2].\n\n"
+        "      [1] Oficina de Estadísticas de Japón: Informe 2025\n"
+        "      [2] Oficina de Estadísticas de Japón: Informe 2015\n"
+        "    </answer>\n"
+        "    <gaps>[]</gaps>\n"
+        "  </example>\n\n"
+        "  <input>\n"
+        "    <query>{query}</query>\n"
+        "    <answer>{answer}</answer>\n"
+        "  </input>\n"
+        "</prompt>\n"
+        "/nothink"
     ),
 }
 
@@ -77,12 +130,60 @@ def create_prompt(
     history: list[ChatMessage] | None = None,
     chunks: list[RetrievedChunk] | None = None,
     max_tokens: int = settings.CTX_WINDOW,
-) -> str:
-    """Prompt = Chat_History + Chunks + Query"""
+) -> list[ChatMessage]:
+    assert isinstance(query, str) and query.strip()
+
     history = history or []
     chunks = chunks or []
+    context = (
+        "\n".join(
+            f"<chunk{i}>{c.chunk.text}</chunk{i}>" for i, c in enumerate(chunks)
+        )
+        if chunks
+        else "NO CONTEXT"
+    )
 
+    # Add history + context + user query
+    messages: list[ChatMessage] = [
+        {
+            "role": "user",
+            "content": PROMPT["generate_answer"].format(
+                context=context, query=query
+            ),
+        }
+    ]
+    messages.extend(history)
+    messages.reverse()
+    log.debug(
+        "Total Tokens: %d",
+        count_tokens("\n".join(p["content"] for p in messages)),
+    )
+
+    # Trim Messages to fit the CTX_WINDOW
+    total_tokens = 0
+    prompt: list[ChatMessage] = []
+    for msg in reversed(messages):
+        tokens = count_tokens(msg["content"])
+        if total_tokens + tokens > max_tokens:
+            break
+        prompt.append(msg)
+        total_tokens += tokens
+
+    assert total_tokens < max_tokens
+    log.debug("Response without RAG prompt:\n%s", prompt)
+    return prompt
+
+
+def create_prompt_non_instruct(
+    query: str,
+    history: list[ChatMessage] | None = None,
+    chunks: list[RetrievedChunk] | None = None,
+    max_tokens: int = settings.CTX_WINDOW,
+) -> str:
     assert isinstance(query, str) and query.strip()
+
+    history = history or []
+    chunks = chunks or []
 
     h_str = "\n".join(
         f"<|{h['role']}|> {h['content']}"
