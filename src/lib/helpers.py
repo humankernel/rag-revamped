@@ -10,7 +10,6 @@ log = logging.getLogger("rag")
 
 @lru_cache(1000)
 def count_tokens(text: str) -> int:
-    log.debug("count_tokens(text=%s)", text)
     if not text:
         return 0
 
@@ -20,8 +19,8 @@ def count_tokens(text: str) -> int:
     count = len(tokens)
     after = count_tokens.cache_info()
 
-    log.debug("count_tokens: input length=%d → tokens=%d", len(text), count)
-    log.debug("count_tokens: cache hit=%s", after.hits > before.hits)
+    log.debug("input length=%d → tokens=%d", len(text), count)
+    log.debug("cache hit=%s", after.hits > before.hits)
     return count
 
 
@@ -37,7 +36,7 @@ def extract_message_content(
 
 
 def parse_history(history: list[ChatMessage]) -> list[ChatMessage]:
-    log.info(f"parse_history: {len(history)} messages in")
+    log.info("%d messages in", len(history))
     assert isinstance(history, list)
     assert all(isinstance(h, dict) for h in history)
     # TODO: this step only need to be run in the last history input

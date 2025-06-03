@@ -50,10 +50,10 @@ class LoadDocuments:
             return chunks
 
 
-# # loader = LoadDocuments()
-# # docs, chunks = loader.load(["docs/attention-is-all-you-need.pdf"])
-# # print(docs)
-# # print(chunks)
+# loader = LoadDocuments()
+# docs, chunks = loader.load(["docs/attention-is-all-you-need.pdf"])
+# print(docs)
+# print(chunks)
 
 # converter = DocumentConverter()
 # result = converter.convert("https://arxiv.org/pdf/2408.09869")
