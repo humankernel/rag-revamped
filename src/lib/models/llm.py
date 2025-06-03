@@ -1,3 +1,4 @@
+import logging
 from typing import Generator, Type
 
 import vllm
@@ -6,7 +7,7 @@ from pydantic import BaseModel
 from vllm.sampling_params import GuidedDecodingParams
 
 from lib.helpers import count_tokens
-from lib.types import GenerationParams
+from lib.types import ChatMessage, GenerationParams
 from settings import settings
 
 DEFAULT_PARAMS: GenerationParams = {
@@ -17,9 +18,12 @@ DEFAULT_PARAMS: GenerationParams = {
     "presence_penalty": 1.2,
 }
 
+log = logging.getLogger("rag")
+
 
 class OpenAIClient:
     def __init__(self) -> None:
+        log.info("llm: starting client in dev mode")
         self.model = OpenAI(
             api_key="API",
             base_url=settings.CLIENT_URL,
@@ -47,15 +51,14 @@ class OpenAIClient:
 
     def generate_stream(
         self,
-        prompt: str,
+        messages: list[ChatMessage],
         params: GenerationParams = {},
     ) -> Generator[str, None, None]:
-        assert count_tokens(prompt) < settings.CTX_WINDOW
-        assert prompt
+        assert isinstance(messages, list)
 
         params = DEFAULT_PARAMS | params
         response = self.model.chat.completions.create(
-            messages=[{"role": "assistant", "content": prompt}],
+            messages=messages,  # type: ignore
             model=settings.LLM_MODEL,
             stream=True,
             **params,
@@ -64,9 +67,14 @@ class OpenAIClient:
             yield output.choices[0].delta.content or ""
 
 
-# TODO: explore bitsandbytes (https://docs.vllm.ai/en/stable/features/quantization/bnb.html)
 class vLLMClient:
     def __init__(self) -> None:
+        log.info(
+            "llm: starting vllm with:\nmodel:%s - dtype:%s - max_model_len:%s",
+            settings.LLM_MODEL,
+            settings.DTYPE,
+            settings.CTX_WINDOW,
+        )
         self.model = vllm.LLM(
             model=settings.LLM_MODEL,
             dtype=settings.DTYPE,
@@ -75,7 +83,9 @@ class vLLMClient:
             max_model_len=settings.CTX_WINDOW,
             max_num_seqs=2,
             enable_chunked_prefill=True,
-            gpu_memory_utilization=0.5,
+            gpu_memory_utilization=0.6,
+            reasoning_parser="deepseek_r1",
+            guided_decoding_backend="xgrammar"
         )
 
     def generate(
@@ -86,7 +96,7 @@ class vLLMClient:
     ) -> str:
         assert count_tokens(prompt) < settings.CTX_WINDOW
         assert prompt
-    
+
         params = DEFAULT_PARAMS | params
         response = self.model.generate(
             prompt,
@@ -103,15 +113,14 @@ class vLLMClient:
 
     def generate_stream(
         self,
-        prompt: str,
+        messages: list[ChatMessage],
         params: GenerationParams = {},
     ) -> Generator[str, None, None]:
-        assert count_tokens(prompt) < settings.CTX_WINDOW
-        assert prompt
+        assert isinstance(messages, list)
 
         params = DEFAULT_PARAMS | params
         response = self.model.generate(
-            prompt, sampling_params=vllm.SamplingParams(**params)
+            [messages], sampling_params=vllm.SamplingParams(**params)
         )
         for output in response:
             yield output.outputs[0].text
