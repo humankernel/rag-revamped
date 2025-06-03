@@ -1,5 +1,6 @@
 import logging
 import time
+from contextlib import contextmanager
 from typing import Generator
 
 from core.indexing import load_documents
@@ -17,7 +18,6 @@ from lib.types import (
     Message,
     QueryPlan,
     RetrievedChunk,
-    system_msg,
 )
 from lib.vectordb import KnowledgeBase
 from settings import settings
@@ -28,9 +28,9 @@ ChatMessageAndChunk = tuple[ChatMessage | str, list[RetrievedChunk]]
 
 # Models -----------------------------------------------------------------------
 
-llm_model = OpenAIClient() if settings.ENVIRONMENT == "dev" else vLLMClient()
-embedding_model = EmbeddingModel()
-reranker_model = RerankerModel()
+llm = OpenAIClient() if settings.ENVIRONMENT == "dev" else vLLMClient()
+embeddings = EmbeddingModel()
+reranker = RerankerModel()
 
 
 # Logic ------------------------------------------------------------------------
@@ -57,95 +57,228 @@ def ask(
             "frequency_penalty": frequency_penalty,
             "presence_penalty": presence_penalty,
         }
-        log.info("Query: %s, Files: %s, History: %s", query, files, history)
+        log.info("Query: %s, Files: %s", query, files)
 
         if files:
-            start_time = time.time()
-            log.info("Indexing %d file(s)", len(files))
-            yield system_msg(title=f"Indexing {len(files)} files"), []
-
-            docs, chunks = load_documents(files)
-            db.insert(docs, chunks, embedding_model, batch_size=32)
-            duration = time.time() - start_time
-
-            log.debug("Indexed files in %.2f seconds", duration)
-            yield system_msg(title=f"Indexed {len(files)} files"), []
+            yield (
+                ChatMessage(
+                    role="assistant",
+                    content=f"Indexing {len(files)} files...",
+                    metadata={"title": "Indexing", "status": "pending"},
+                ),
+                [],
+            )
+            with log_action(f"Indexing {len(files)} file(s)"):
+                docs, chunks = load_documents(files)
+                db.insert(docs, chunks, embeddings, batch_size=32)
+            yield (
+                ChatMessage(
+                    role="assistant",
+                    content="Indexed Finished :)",
+                    metadata={
+                        "title": "Indexing",
+                        "status": "done",
+                    },
+                ),
+                [],
+            )
 
         if not query:
             log.info("No query provided.")
             return
 
         if db.is_empty:
-            log.info("db is empty, generating answer without context")
-            prompt = create_prompt(query, history)
-            buffer = ""
-            for token in llm_model.generate_stream(prompt, params):
-                buffer += token
-                yield buffer, []
+            with log_action("db empty, answering without context"):
+                history.append({"role": "user", "content": query})
+                buffer = ""
+                for token in llm.generate_stream(history, params):
+                    buffer += token
+                    yield buffer, []
             return
 
         # 1. Generate Query Plan
-        log.info("Generating initial query plan")
-        yield system_msg("Query Plan", "Generating Query Plan"), []
-        prompt = PROMPT["query_plan"].format(query=query)
-        response = llm_model.generate(prompt, QueryPlan, params)
-        plan = QueryPlan.model_validate_json(response)
-        yield system_msg("Query Plan", str(plan)), []
+        with log_action("Generating initial Query Plan"):
+            yield (
+                ChatMessage(
+                    role="assistant",
+                    content=f"Generating Query Plan for: {query}",
+                    metadata={
+                        "title": "Generating Query Plan",
+                        "status": "pending",
+                    },
+                ),
+                [],
+            )
+            prompt = PROMPT["query_plan"].format(query=query)
+            log.debug("Query Plan prompt:\n%s", prompt)
+
+            response = llm.generate(prompt, QueryPlan, params)
+            log.debug("Query Plan response:\n%s", response)
+
+            plan = QueryPlan.model_validate_json(response)
+            yield (
+                ChatMessage(
+                    role="assistant",
+                    content=str(plan),
+                    metadata={
+                        "title": "Generating Query Plan",
+                        "status": "done",
+                    },
+                ),
+                [],
+            )
 
         chunks: list[RetrievedChunk] = []
         state = GenerationState()
         seen_chunk_ids: set[str] = set()
 
-        for iter in range(max_iterations):
-            log.info("Iteration %d/%d", iter + 1, max_iterations)
+        for iteration in range(max_iterations):
+            log.info("Iteration %d/%d", iteration + 1, max_iterations)
 
             # 2. Retrieve
-            for query in plan.sub_queries:
-                log.info("Retrieving Chunks for query: %s", query)
-                new_chunks = db.search(
-                    query,
-                    embedding_model=embedding_model,
-                    reranker_model=reranker_model,
-                    top_k=10,
-                    top_r=3,
-                    threshold=0.6,
-                )
-                log.debug("Chunks %s", new_chunks)
-                for chunk in new_chunks:
-                    if chunk.chunk.id not in seen_chunk_ids:
-                        seen_chunk_ids.add(chunk.chunk.id)
-                        chunks.append(chunk)
+            for subquery in plan.sub_queries:
+                with log_action(f"Retrieving Chunks for sub-query: {subquery}"):
+                    new_chunks = db.search(
+                        subquery,
+                        embedding_model=embeddings,
+                        reranker_model=reranker,
+                        top_k=10,
+                        top_r=3,
+                        threshold=0.6,
+                    )
+                    log.debug("Retrieved %d chunks", len(new_chunks))
+
+                    for chunk in new_chunks:
+                        if chunk.chunk.id not in seen_chunk_ids:
+                            seen_chunk_ids.add(chunk.chunk.id)
+                            chunks.append(chunk)
+                    yield "", chunks
 
             # 3. Generate Answer
-            log.info("Generating Answer")
-            prompt = create_prompt(query, history, chunks)
-            state.answer = ""
-            for token in llm_model.generate_stream(prompt, params):
-                state.answer += token
-                yield system_msg(title="Thinking", content=state.answer), chunks
-            log.debug("Answer: %s", state.answer)
+            with log_action("Generating Answer"):
+                prompt = create_prompt(query, history, chunks)
+                log.debug("Generate Answer prompt:\n%s", prompt)
+
+                state.answer = ""
+                for token in llm.generate_stream(prompt, params):
+                    state.answer += token
+                    yield (
+                        ChatMessage(
+                            role="assistant",
+                            content=state.answer,
+                            metadata={
+                                "title": "Thinking",
+                                "status": "pending",
+                            },
+                        ),
+                        chunks,
+                    )
+
+                yield (
+                    ChatMessage(
+                        role="assistant",
+                        content=state.answer,
+                        metadata={
+                            "title": "Thinking",
+                            "status": "done",
+                        },
+                    ),
+                    chunks,
+                )
 
             # 4. Validate Answer
-            log.info("Validating answer completeness")
-            prompt = PROMPT["validate_answer"].format(
-                query=plan.query, answer=state.answer
-            )
-            response = llm_model.generate(prompt, GenerationState)
-            state = GenerationState.model_validate_json(response)
-            log.debug("Gaps: %s", state.gaps)
+            with log_action("Validating answer completeness"):
+                yield (
+                    ChatMessage(
+                        role="assistant",
+                        content=f"Validating answer: {state.answer}",
+                        metadata={
+                            "title": "Validating answer",
+                            "status": "pending",
+                        },
+                    ),
+                    chunks,
+                )
+                prompt = PROMPT["validate_answer"].format(
+                    query=plan.query, answer=state.answer
+                )
+                log.debug("Validating answer prompt:\n%s", prompt)
+
+                response = llm.generate(prompt, GenerationState, params)
+                log.debug("Validating answer response:\n%s", response)
+
+                state = GenerationState.model_validate_json(response)
+                yield (
+                    ChatMessage(
+                        role="assistant",
+                        content=f"Answer Gaps: {state.gaps}",
+                        metadata={
+                            "title": "Validating answer",
+                            "status": "done",
+                        },
+                    ),
+                    chunks,
+                )
 
             if not state.gaps:
-                log.info("Answer is complete")
+                log.info(
+                    "Answer complete (at iteration %d/%d)",
+                    iteration,
+                    max_iterations,
+                )
                 break
 
             # 5. Refine query plan
-            log.info("Answer has gaps. Refining query plan")
-            prompt = PROMPT["query_plan"].format(query=". ".join(state.gaps))
-            response = llm_model.generate(prompt, QueryPlan)
-            plan = QueryPlan.model_validate_json(response)
+            with log_action("Answer has gaps. Refining query plan"):
+                yield (
+                    ChatMessage(
+                        role="assistant",
+                        content=f"Creating new sub-queries using the gaps:\n{state.gaps}",
+                        metadata={
+                            "title": "Refining query plan",
+                            "status": "pending",
+                        },
+                    ),
+                    chunks,
+                )
+                prompt = PROMPT["query_plan"].format(
+                    query=".\n".join(state.gaps)
+                )
+                log.debug("Refining query plan prompt:\n%s", prompt)
+
+                response = llm.generate(prompt, QueryPlan, params)
+                log.debug("Refining query plan response:\n%s", response)
+
+                plan = QueryPlan.model_validate_json(response)
+                log.debug(
+                    "Refining query plan [sub-queries]:\n%s",
+                    ".\n".join(plan.sub_queries),
+                )
+                yield (
+                    ChatMessage(
+                        role="assistant",
+                        content=f"New sub-queries:\n{'.\n'.join(plan.sub_queries)}",
+                        metadata={
+                            "title": "Refining query plan",
+                            "status": "done",
+                        },
+                    ),
+                    chunks,
+                )
 
         yield state.answer, chunks
 
     except Exception as e:
         log.exception("Pipeline failed: %s", str(e), exc_info=True)
-        yield system_msg("An unexpected error occurred during processing."), []
+        yield "Ocurrio un error durante el proceso.", []
+
+
+@contextmanager
+def log_action(message: str, level=logging.DEBUG):
+    start_time = time.time()
+    log.info(message)
+    try:
+        yield
+    finally:
+        duration = time.time() - start_time
+        log.log(level, "%s (took %.2f seconds)", message, duration)
