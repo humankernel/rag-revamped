@@ -85,7 +85,7 @@ class vLLMClient:
             enable_chunked_prefill=True,
             gpu_memory_utilization=0.6,
             reasoning_parser="deepseek_r1",
-            guided_decoding_backend="xgrammar"
+            guided_decoding_backend="xgrammar",
         )
 
     def generate(
@@ -119,7 +119,7 @@ class vLLMClient:
         assert isinstance(messages, list)
 
         params = DEFAULT_PARAMS | params
-        response = self.model.generate(
+        response = self.model.chat(
             messages, sampling_params=vllm.SamplingParams(**params)
         )
         for output in response:
