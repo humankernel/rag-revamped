@@ -26,11 +26,15 @@ log = logging.getLogger("app")
 
 ChatMessageAndChunk = tuple[ChatMessage | str, list[RetrievedChunk]]
 MAX_RETRIES = 3
+TOP_K=20
+TOP_R=3
+THRESHOLD=0.5
 
 # Models -----------------------------------------------------------------------
 
 llm = OpenAIClient() if settings.ENVIRONMENT == "dev" else vLLMClient()
 embeddings = EmbeddingModel()
+reranker = None
 # reranker = RerankerModel()
 
 
@@ -146,9 +150,9 @@ def ask(
                             subquery,
                             embedding_model=embeddings,
                             reranker_model=reranker,
-                            top_k=10,
-                            top_r=3,
-                            threshold=0.6,
+                            top_k=TOP_K,
+                            top_r=TOP_R,
+                            threshold=THRESHOLD,
                         )
                         log.debug("Retrieved %d chunks", len(new_chunks))
 
