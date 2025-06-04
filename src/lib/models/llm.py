@@ -120,7 +120,7 @@ class vLLMClient:
 
         params = DEFAULT_PARAMS | params
         response = self.model.generate(
-            [messages], sampling_params=vllm.SamplingParams(**params)
+            messages, sampling_params=vllm.SamplingParams(**params)
         )
         for output in response:
             yield output.outputs[0].text

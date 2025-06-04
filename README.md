@@ -35,7 +35,7 @@ cd rag
 (Optional) In a local environment (e.g dev mode) you can start a separated `vLLM` instance.
 ```shell
 # https://docs.vllm.ai/en/stable/serving/engine_args.html
-❯ vllm serve ./qwen2.5-1.5b-instruct-q8_0.gguf --device cuda --gpu-memory-utilization 0.6 --max-model-len 2048
+> vllm serve ./Qwen3-4B-AWQ --device cuda --gpu-memory-utilization 0.6 --max-model-len 4096
 ```
 
 ## Tests
