@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 from lib.helpers import count_tokens
 from lib.models.llm import DEFAULT_PARAMS, OpenAIClient, vLLMClient
-from settings import settings
+from lib.settings import settings
 
 # Fixtures --------------------------------------------------------------------
 

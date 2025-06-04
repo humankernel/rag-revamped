@@ -17,7 +17,7 @@ from lib.models.embedding import (
 from lib.models.rerank import RerankerModel
 from lib.types import Chunk, Document, RetrievedChunk
 
-log = logging.getLogger("rag")
+log = logging.getLogger("app")
 
 class KnowledgeBase:
     def __init__(self, name: str, test: bool = False) -> None:

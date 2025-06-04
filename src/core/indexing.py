@@ -9,7 +9,7 @@ from docling.document_converter import DocumentConverter
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from lib.types import Chunk, Document
-from settings import settings
+from lib.settings import settings
 
 
 class LoadDocuments:

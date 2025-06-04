@@ -7,8 +7,8 @@ from pydantic import BaseModel
 from vllm.sampling_params import GuidedDecodingParams
 
 from lib.helpers import count_tokens
+from lib.settings import settings
 from lib.types import ChatMessage, GenerationParams
-from settings import settings
 
 DEFAULT_PARAMS: GenerationParams = {
     "max_tokens": 500,
@@ -18,7 +18,7 @@ DEFAULT_PARAMS: GenerationParams = {
     "presence_penalty": 1.2,
 }
 
-log = logging.getLogger("rag")
+log = logging.getLogger("app")
 
 
 class OpenAIClient:

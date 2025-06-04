@@ -1,7 +1,7 @@
 import torch
 import vllm
 
-from settings import settings
+from lib.settings import settings
 
 
 class RerankerModel:

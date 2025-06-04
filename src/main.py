@@ -4,9 +4,9 @@ import time
 import gradio as gr
 
 from core.pipeline import ask
+from lib.settings import settings
 from lib.types import RetrievedChunk
 from lib.vectordb import KnowledgeBase
-from settings import settings
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -16,13 +16,13 @@ logging.basicConfig(
     filemode="a",
     encoding="utf-8",
 )
-log = logging.getLogger("rag")
+log = logging.getLogger("app")
 
 
 def main() -> None:
     log.info("Starting RAG in %s mode", settings.ENVIRONMENT)
 
-    with gr.Blocks(fill_height=True) as demo:
+    with gr.Blocks(fill_height=True) as ui:
         db = gr.State(KnowledgeBase("att", test=True))
         local_storage = gr.BrowserState()
         chunks = gr.State([])
@@ -115,7 +115,7 @@ def main() -> None:
             save_history=True,
         )
 
-        @demo.load(
+        @ui.load(
             inputs=[local_storage],
             outputs=[
                 temperature,
@@ -181,7 +181,7 @@ def main() -> None:
                 f"✅ Saved to local storage at {timestamp}", visible=True
             )
 
-    demo.queue(api_open=False).launch(
+    ui.queue(api_open=False).launch(
         max_file_size="300mb",
         share=settings.ENVIRONMENT == "prod",
     )

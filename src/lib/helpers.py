@@ -5,7 +5,7 @@ import tiktoken
 
 from lib.types import ChatMessage, Message
 
-log = logging.getLogger("rag")
+log = logging.getLogger("app")
 
 
 @lru_cache(1000)

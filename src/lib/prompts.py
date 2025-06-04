@@ -2,8 +2,8 @@ import logging
 from typing import Final, TypedDict
 
 from lib.helpers import count_tokens
+from lib.settings import settings
 from lib.types import ChatMessage, RetrievedChunk
-from settings import settings
 
 
 class Prompt(TypedDict):
@@ -12,7 +12,7 @@ class Prompt(TypedDict):
     validate_answer: str
 
 
-log = logging.getLogger("rag")
+log = logging.getLogger("app")
 
 
 PROMPT: Final[Prompt] = {
