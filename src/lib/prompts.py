@@ -39,7 +39,7 @@ def create_prompt(
     chunks = chunks or []
     context = (
         "\n".join(
-            f"<chunk{i}>{c.chunk.text}</chunk{i}>" for i, c in enumerate(chunks)
+            f"<{i}>{c.chunk.text}</{i}>" for i, c in enumerate(chunks)
         )
         if chunks
         else "NO CONTEXT"

@@ -74,7 +74,7 @@ def main() -> None:
         with gr.Sidebar(position="right", open=False):
             gr.Markdown("# References")
 
-            @gr.render(inputs=chunks)
+            @gr.render(chunks)
             def render_chunks(chunks: list[RetrievedChunk]):
                 for chunk in chunks:
                     with gr.Accordion(
@@ -83,9 +83,9 @@ def main() -> None:
                     ):
                         gr.Markdown(
                             f"scores: (dense:{chunk.scores['dense_score']:.2f}"
-                            ", sparse:{chunk.scores['sparse_score']:.2f}"
-                            ", hybrid:{chunk.scores['hybrid_score']:.2f}"
-                            ", rerank:{chunk.scores['rerank_score']:.2f}) \n\n"
+                            f", sparse:{chunk.scores['sparse_score']:.2f}"
+                            f", hybrid:{chunk.scores['hybrid_score']:.2f}"
+                            f", rerank:{chunk.scores['rerank_score']:.2f}) \n\n"
                             f"{chunk.chunk.text}",
                         )
 
