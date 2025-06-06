@@ -1,4 +1,5 @@
 import logging
+from typing import Final, Literal, TypedDict
 
 from lib.helpers import count_tokens
 from lib.settings import settings
@@ -7,13 +8,14 @@ from lib.types import ChatMessage, RetrievedChunk
 log = logging.getLogger("app")
 
 
-PROMPT = """
+class Prompt(TypedDict):
+    generation: str
+    contextualize: str
+
+
+PROMPT: Final[Prompt] = {
+    "generation": """
 <prompt>
-  <instructions>
-    <item>Genera una respuesta en el idioma de la consulta.</item>
-    <item>Cita cada afirmación con [n], n hace referencia al numero del chunk utilizado para responder. </item>
-    <item>Si no se provee de contexto o no es suficiente, NO INVENTES LA RESPUESTA, solo di que no hay contexto suficiente.</item>
-  </instructions>
   <input>
     <context>
       {context}
@@ -22,9 +24,26 @@ PROMPT = """
       {query}
     </query>
   </input>
+  <instructions>
+    <item>Genera una respuesta en el idioma de la consulta.</item>
+    <item>Cita cada afirmación con [n] al final, n hace referencia al numero del chunk del contexto utilizado para responder. </item>
+    <item>Si no se provee de contexto o no es suficiente, NO INVENTES LA RESPUESTA, solo di que no hay contexto suficiente.</item>
+  </instructions>
 </prompt>
-/nothink
-"""
+""",
+    "contextualize": """
+<document>
+{context}
+</document>
+
+Here is a chunk extracted from the document:
+<chunk>
+{chunk}
+</chunk>
+
+Provide a concise context that places this chunk within the overall document. Focus on its role, relevance, and connection to the rest of the content. The context should be brief, precise, and tailored to improve search retrieval. Avoid redundancy, and refrain from repeating ideas. Answer with only the context and nothing else.
+""",
+}
 
 
 def create_prompt(
@@ -39,7 +58,8 @@ def create_prompt(
     chunks = chunks or []
     context = (
         "\n".join(
-            f"<{i}>{c.chunk.text}</{i}>" for i, c in enumerate(chunks)
+            f"<{i}>{c.chunk.text.replace('\n', ' ')}</{i}>"
+            for i, c in enumerate(chunks)
         )
         if chunks
         else "NO CONTEXT"
@@ -49,7 +69,9 @@ def create_prompt(
     messages: list[ChatMessage] = [
         {
             "role": "user",
-            "content": PROMPT.format(context=context, query=query),
+            "content": PROMPT["generation"].format(
+                context=context, query=query
+            ),
         }
     ]
     messages.extend(filter(lambda m: len(m["content"]) > 0, history))

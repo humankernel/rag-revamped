@@ -11,7 +11,7 @@ from lib.vectordb import KnowledgeBase
 logging.basicConfig(
     level=logging.DEBUG,
     format="%(asctime)s | %(levelname)-8s | %(name)s | %(filename)s:%(lineno)d | %(funcName)s() | %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S", 
+    datefmt="%Y-%m-%d %H:%M:%S",
     filename="logs.log",
     filemode="a",
     encoding="utf-8",
@@ -81,13 +81,7 @@ def main() -> None:
                         label=f"id: {chunk.chunk.id}, doc_id: {chunk.chunk.doc_id}",
                         open=False,
                     ):
-                        gr.Markdown(
-                            f"scores: (dense:{chunk.scores['dense_score']:.2f}"
-                            f", sparse:{chunk.scores['sparse_score']:.2f}"
-                            f", hybrid:{chunk.scores['hybrid_score']:.2f}"
-                            f", rerank:{chunk.scores['rerank_score']:.2f}) \n\n"
-                            f"{chunk.chunk.text}",
-                        )
+                        gr.Markdown(str(chunk))
 
         gr.ChatInterface(
             fn=ask,

@@ -31,23 +31,32 @@ class OpenAIClient:
 
     def generate(
         self,
-        prompt: str,
+        prompts: list[str],
         output_format: Type[BaseModel] | None,
         params: GenerationParams = {},
-    ) -> str:
-        assert count_tokens(prompt) < settings.CTX_WINDOW
-        assert prompt
+    ) -> list[str]:
+        assert all(
+            count_tokens(prompt) < settings.CTX_WINDOW for prompt in prompts
+        )
+        assert prompts
 
         params = DEFAULT_PARAMS | params
-        response = self.model.chat.completions.create(
-            messages=[{"role": "assistant", "content": prompt}],
-            model=settings.LLM_MODEL,
-            extra_body={"guided_json": output_format.model_json_schema()}
-            if output_format
-            else None,
-            **params,
-        )
-        return response.choices[0].message.content or ""
+        all_outputs: list[str] = []
+
+        for prompt in prompts:
+            response = self.model.chat.completions.create(
+                messages=[{"role": "assistant", "content": prompt}],
+                model=settings.LLM_MODEL,
+                extra_body={"guided_json": output_format.model_json_schema()}
+                if output_format
+                else None,
+                **params,
+            )
+            response = response.choices[0].message.content
+            if response:
+                all_outputs.append(response)
+
+        return all_outputs
 
     def generate_stream(
         self,
@@ -79,27 +88,30 @@ class vLLMClient:
             model=settings.LLM_MODEL,
             dtype=settings.DTYPE,
             task="generate",
-            enforce_eager=False,
             max_model_len=settings.CTX_WINDOW,
-            max_num_seqs=2,
             enable_chunked_prefill=True,
-            gpu_memory_utilization=0.6,
             reasoning_parser="deepseek_r1",
             guided_decoding_backend="xgrammar",
+            enable_prefix_caching=True,
+            max_num_seqs=8,
+            max_num_batched_tokens=8192,  # batching
+            gpu_memory_utilization=0.6,
         )
 
     def generate(
         self,
-        prompt: str,
+        prompts: list[str],
         output_format: Type[BaseModel] | None = None,
         params: GenerationParams = {},
-    ) -> str:
-        assert count_tokens(prompt) < settings.CTX_WINDOW
-        assert prompt
+    ) -> list[str]:
+        assert all(
+            count_tokens(prompt) < settings.CTX_WINDOW for prompt in prompts
+        )
+        assert prompts
 
         params = DEFAULT_PARAMS | params
         response = self.model.generate(
-            prompt,
+            prompts,
             sampling_params=vllm.SamplingParams(
                 **params,
                 guided_decoding=GuidedDecodingParams(
@@ -109,7 +121,7 @@ class vLLMClient:
                 else None,
             ),
         )
-        return response[0].outputs[0].text
+        return [r.outputs[0].text for r in response]
 
     def generate_stream(
         self,

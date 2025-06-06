@@ -1,7 +1,8 @@
 import logging
+from pathlib import Path
 from typing import Generator
 
-from core.indexing import load_documents
+from core.indexing import process_pdf
 from lib.helpers import (
     extract_message_content,
     parse_history,
@@ -22,7 +23,7 @@ log = logging.getLogger("app")
 
 ChatMessageAndChunk = tuple[ChatMessage | str, list[RetrievedChunk]]
 MAX_RETRIES = 3
-TOP_K = 20
+TOP_K = 10
 TOP_R = 4
 THRESHOLD = 0.5
 
@@ -30,7 +31,8 @@ THRESHOLD = 0.5
 
 llm = vLLMClient() if settings.ENVIRONMENT == "prod" else OpenAIClient()
 embeddings = EmbeddingModel()
-reranker = RerankerModel()
+# reranker = RerankerModel()
+reranker = None
 
 
 # Logic ------------------------------------------------------------------------
@@ -60,21 +62,21 @@ def ask(
             log.info("Query: %s, Files: %s", query, files)
 
             # 1. Indexing
-            if files:
+            for file in files:
                 yield (
                     ChatMessage(
                         role="assistant",
-                        content=f"Indexing {len(files)} files...",
+                        content=f"Indexing file: {file}",
                         metadata={"title": "Indexing", "status": "pending"},
                     ),
                     [],
                 )
-                docs, docs_chunks = load_documents(files)
-                db.insert(docs, docs_chunks, embeddings, batch_size=32)
+                doc, doc_chunks = process_pdf(path=Path(file), model=llm)
+                db.insert([doc], doc_chunks, embeddings, batch_size=32)
                 yield (
                     ChatMessage(
                         role="assistant",
-                        content="Indexed Finished :)",
+                        content=f"Indexed Finished: (w/ {len(doc_chunks)} chunks)",
                         metadata={
                             "title": "Indexing",
                             "status": "done",
@@ -109,8 +111,11 @@ def ask(
                 buffer += token
                 yield buffer, chunks
 
-            return buffer, chunks
+            return
 
         except Exception as e:
             log.exception("Pipeline failed: %s", str(e), exc_info=True)
             yield "Ocurrio un error durante el proceso.", []
+
+
+# Como DMA reduce el uso de la CPU?

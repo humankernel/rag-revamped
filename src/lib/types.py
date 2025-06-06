@@ -1,5 +1,5 @@
-from dataclasses import dataclass
 import time
+from dataclasses import dataclass
 from typing import Literal, NotRequired, TypedDict
 
 from pydantic import BaseModel, Field
@@ -37,8 +37,8 @@ class Document(BaseModel):
 class Chunk(BaseModel):
     id: str
     doc_id: str
-    page: int
     text: str
+    original_text: str
 
 
 class Scores(TypedDict):
@@ -58,14 +58,19 @@ class RetrievedChunk:
         return hash(self.chunk.id)
 
     def __repl__(self) -> str:
+        source = self.chunk.doc_id
+        dense = self.scores.get("dense_score", 0.0)
+        sparse = self.scores.get("sparse_score", 0.0)
+        colbert = self.scores.get("colbert_score", 0.0)
+        hybrid = self.scores.get("hybrid_score", 0.0)
+        rerank = self.scores.get("rerank_score", 0.0)
+        text = self.chunk.text[:500]
+
         return (
-            f"Source   {self.chunk.doc_id}\n"
-            f"Dense:   {self.scores['dense_score']:.3f}, "
-            f"Sparse:  {self.scores['sparse_score']:.3f}, "
-            f"Colbert: {self.scores['colbert_score']:.3f} \n"
-            f"Hybrid:  {self.scores['hybrid_score']:.3f} \n"
-            f"Rerank:  {self.scores['rerank_score']:.3f} \n"
-            f"Text:\n  {self.chunk.text[:300]} ... "
+            f"Source {source}\n"
+            f"Dense: {dense}, Sparse:  {sparse}, Colbert: {colbert:.3f}\n"
+            f"Hybrid: {hybrid:.3f} Rerank:  {rerank:.3f}\n\n"
+            f"{text}"
         )
 
 
@@ -75,3 +80,4 @@ class GenerationParams(TypedDict):
     top_p: NotRequired[float]
     frequency_penalty: NotRequired[float]
     presence_penalty: NotRequired[float]
+    stop: NotRequired[list[str]]
