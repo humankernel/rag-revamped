@@ -1,0 +1,27 @@
+
+=== Beej C Book ===
+
+Que funcion se utiliza para reservar memoria en el Heap
+
+¿Quién es el creador del lenguaje de programación C y en qué año fue desarrollado?
+
+¿Por qué Beej recomienda tener conocimientos previos en otros lenguajes de programación antes de comenzar con su guía de C?
+
+¿Cómo explica Beej la relación entre el código en C y el código máquina que entiende el CPU?
+
+¿Qué tipo de datos utiliza C para almacenar números enteros y cuál es su tamaño típico en memoria?
+
+¿Qué función cumple el preprocesador en el proceso de compilación en C según Beej, y cuáles son dos directivas comunes que utiliza?
+
+
+=== What Every Programmer Should Know About Memory" (2007) ===
+
+¿Cómo afecta la jerarquía de memoria (registros, cachés L1/L2/L3, RAM, disco) al rendimiento de las aplicaciones, y qué estrategias recomienda el autor para optimizar el acceso a datos?
+
+¿De qué manera el Direct Memory Access (DMA) mejora el rendimiento del sistema, y en qué casos su uso puede introducir problemas de coherencia o contención?
+
+El documento menciona diferentes tipos de RAM y controladores de memoria. ¿Qué diferencias clave existen entre tecnologías como DDR, GDDR y RAM estática (SRAM), y cómo influyen en el rendimiento de un programa?
+
+¿Qué técnicas de programación sugiere el autor para minimizar los cache misses y mejorar la localidad espacial/temporal en aplicaciones de alto rendimiento?
+
+El paper fue escrito en 2007. ¿Qué avances importantes en arquitecturas de memoria (como NVMe, memorias no volátiles, o cambios en las jerarquías de caché de CPUs modernas) han surgido desde entonces que podrían requerir una actualización del documento?
