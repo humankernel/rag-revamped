@@ -15,9 +15,10 @@ from lib.models.embedding import (
     sparse_similarity,
 )
 from lib.models.rerank import RerankerModel
-from lib.types import Chunk, Document, RetrievedChunk
+from lib.schemas import Chunk, Document, RetrievedChunk
 
 log = logging.getLogger("app")
+
 
 class KnowledgeBase:
     def __init__(self, name: str, test: bool = False) -> None:
@@ -49,12 +50,21 @@ class KnowledgeBase:
         embedding_model: EmbeddingModel,
         batch_size: int = 32,
     ) -> None:
+        log.info(f"Embedding {len(docs)} chunks.")
+
         assert len(docs) > 0 and len(chunks) > 0
         assert all(isinstance(d, Document) for d in docs)
         assert all(isinstance(c, Chunk) for c in chunks)
         assert embedding_model
 
-        log.debug(f"Embedding {len(docs)} chunks.")
+        existing_doc_sources = {doc.source for doc in self.documents}
+        docs = list(
+            filter(lambda d: d.source not in existing_doc_sources, docs)
+        )
+
+        if not docs:
+            log.info("No new documents to insert; all are already indexed.")
+            return
 
         start = time.time()
         result = embedding_model.encode(
@@ -64,25 +74,20 @@ class KnowledgeBase:
             return_colbert=True,
             batch_size=batch_size,
         )
-        log.debug(
-            f"Finished embedding {len(docs)} chunks in {time.time() - start}"
-        )
-
-        dense, sparse, colbert = (
-            result["dense"],
-            result["sparse"],
-            result["colbert"],
-        )
+        log.debug(f"Finished emb {len(docs)} chunks in {time.time() - start}")
 
         if len(self.documents) == 0:
-            self.dense_embeddings = dense
-            self.sparse_embeddings = sparse
-            self.colbert_embeddings = colbert
+            self.dense_embeddings = result["dense"]
+            self.sparse_embeddings = result["sparse"]
+            self.colbert_embeddings = result["colbert"]
         else:
-            self.dense_embeddings = np.vstack([self.dense_embeddings, dense])
-            self.sparse_embeddings.extend(sparse)
+            self.dense_embeddings = np.vstack([
+                self.dense_embeddings,
+                result["dense"],
+            ])
+            self.sparse_embeddings.extend(result["sparse"])
             # can't do vstack because colbert are unhomougenious
-            self.colbert_embeddings.extend(colbert)
+            self.colbert_embeddings.extend(result["colbert"])
 
         self.documents.extend(docs)
         self.chunks.extend(chunks)
@@ -97,7 +102,7 @@ class KnowledgeBase:
         reranker_model: RerankerModel | None,
         top_k: int = 20,
         top_r: int = 10,
-        threshold: float = 0,
+        threshold: float = 0.1,
     ) -> list[RetrievedChunk]:
         """Hybrid Search with Reranking"""
         assert not self.is_empty
@@ -185,3 +190,9 @@ class KnowledgeBase:
         else:
             self.db_path.parent.mkdir(parents=True, exist_ok=True)
             log.debug(f"No saved state found at {self.db_path}")
+
+# from core.indexing import process_pdf
+# embedding_model = EmbeddingModel()
+# doc, doc_chunks = process_pdf(path=Path("docs/ragas.pdf"))
+# db = KnowledgeBase("test")
+# db.insert([doc], doc_chunks, embedding_model)

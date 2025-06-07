@@ -8,7 +8,7 @@ from core.generation import (
     create_prompt,
     generate_answer,
 )
-from lib.types import Chunk, RetrievedChunk
+from lib.schemas import Chunk, RetrievedChunk
 
 # CONSTANTS --------------------------------------------------------------------
 

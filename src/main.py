@@ -5,7 +5,7 @@ import gradio as gr
 
 from core.pipeline import ask
 from lib.settings import settings
-from lib.types import RetrievedChunk
+from lib.schemas import RetrievedChunk
 from lib.vectordb import KnowledgeBase
 
 logging.basicConfig(
@@ -69,6 +69,28 @@ def main() -> None:
                 label="Presence Penalty",
                 info="Encourages new topics.",
             )
+            gr.Markdown("# Retrieval Options")
+            top_k = gr.Number(
+                value=20,
+                minimum=3,
+                maximum=30,
+                step=1,
+                label="K Items to Retrieve",
+            )
+            top_r = gr.Number(
+                value=10,
+                minimum=1,
+                maximum=20,
+                step=1,
+                label="R Items to Keep After the initial K items",
+            )
+            threshold = gr.Slider(
+                0.0,
+                1.0,
+                value=0.5,
+                step=0.1,
+                label="Retrieval Score Cutoff",
+            )
             saved_message = gr.Markdown("", visible=False)
 
         with gr.Sidebar(position="right", open=False):
@@ -104,6 +126,9 @@ def main() -> None:
                 top_p,
                 frequency_penalty,
                 presence_penalty,
+                threshold,
+                top_k,
+                top_r
             ],
             additional_outputs=[chunks],
             save_history=True,

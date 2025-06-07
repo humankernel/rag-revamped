@@ -3,7 +3,7 @@ from functools import lru_cache
 
 import tiktoken
 
-from lib.types import ChatMessage, Message
+from lib.schemas import ChatMessage, Message
 
 log = logging.getLogger("app")
 
@@ -14,13 +14,15 @@ def count_tokens(text: str) -> int:
         return 0
 
     before = count_tokens.cache_info()
+
     encoder = tiktoken.get_encoding("cl100k_base")
     tokens = encoder.encode(text)
     count = len(tokens)
-    after = count_tokens.cache_info()
 
+    after = count_tokens.cache_info()
     log.debug("input length=%d → tokens=%d", len(text), count)
     log.debug("cache hit=%s", after.hits > before.hits)
+
     return count
 
 

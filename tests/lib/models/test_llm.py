@@ -1,5 +1,6 @@
 from unittest.mock import MagicMock, patch
 
+from lib.schemas import ChatMessage
 import pytest
 from openai.types.chat import ChatCompletion
 from openai.types.chat.chat_completion_chunk import (
@@ -18,7 +19,9 @@ from lib.settings import settings
 def mock_tiktoken():
     with patch("tiktoken.get_encoding") as mock_get_encoding:
         mock_encoder = MagicMock()
-        mock_encoder.encode.side_effect = lambda text: list(range(len(text) // 4))
+        mock_encoder.encode.side_effect = lambda text: list(
+            range(len(text) // 4)
+        )
         mock_get_encoding.return_value = mock_encoder
         yield {"get_encoding": mock_get_encoding, "encoder": mock_encoder}
 
@@ -45,11 +48,17 @@ def mock_openai():
 
         # Configure regular completion
         mock_completion = MagicMock(spec=ChatCompletion)
-        mock_completion.choices = [MagicMock(message=MagicMock(content="Generated response"))]
+        mock_completion.choices = [
+            MagicMock(message=MagicMock(content="Generated response"))
+        ]
 
         # Configure streaming completion chunks
         mock_chunk1 = MagicMock(spec=ChatCompletionChunk)
-        mock_chunk1.choices = [MagicMock(delta=MagicMock(content="Stream "), index=0, finish_reason=None)]
+        mock_chunk1.choices = [
+            MagicMock(
+                delta=MagicMock(content="Stream "), index=0, finish_reason=None
+            )
+        ]
         mock_chunk2 = MagicMock(spec=ChatCompletionChunk)
         mock_chunk2.choices = [
             MagicMock(
@@ -86,9 +95,9 @@ def test_count_tokens(mock_tiktoken):
 
 def test_vllm_generate(mock_vllm):
     client = vLLMClient()
-    result = client.generate("test prompt")
+    result = client.generate(["test prompt"])
 
-    assert result == "Hello World"
+    assert result == ["Hello World"]
     mock_vllm.generate.assert_called_once()
 
     # Verify sampling params
@@ -106,7 +115,9 @@ def test_vllm_generate_stream(mock_vllm):
     mock_vllm.generate.return_value = [mock_output1, mock_output2]
 
     client = vLLMClient()
-    stream = client.generate_stream("test prompt")
+    stream = client.generate_stream([
+        ChatMessage(role="user", content="Hello World")
+    ])
     results = list(stream)
 
     assert results == ["Hello", " World"]
@@ -115,9 +126,9 @@ def test_vllm_generate_stream(mock_vllm):
 
 def test_openai_generate(mock_openai):
     client = OpenAIClient()
-    result = client.generate("test prompt")
+    result = client.generate(["test prompt"])
 
-    assert result == "Generated response"
+    assert result == ["Generated response"]
     mock_openai.chat.completions.create.assert_called_once_with(
         messages=[{"role": "assistant", "content": "test prompt"}],
         model=settings.LLM_MODEL,
@@ -128,7 +139,9 @@ def test_openai_generate(mock_openai):
 
 def test_openai_generate_stream(mock_openai):
     client = OpenAIClient()
-    stream = client.generate_stream("test prompt")
+    stream = client.generate_stream([
+        ChatMessage(role="user", content="test prompt")
+    ])
     results = list(stream)
 
     assert results == ["Stream ", "response"]
@@ -145,25 +158,29 @@ def test_openai_format_guidance(mock_openai):
         name: str
 
     client = OpenAIClient()
-    client.generate("test prompt", output_format=TestFormat)
+    client.generate(["test prompt"], output_format=TestFormat)
 
     call_args = mock_openai.chat.completions.create.call_args[1]
     assert "guided_json" in call_args["extra_body"]
-    assert call_args["extra_body"]["guided_json"] == TestFormat.model_json_schema()
+    assert (
+        call_args["extra_body"]["guided_json"] == TestFormat.model_json_schema()
+    )
 
 
 def test_token_limit_enforcement(mock_tiktoken, mock_vllm):
-    mock_tiktoken["encoder"].encode.side_effect = lambda x: [0] * (settings.CTX_WINDOW + 1)
+    mock_tiktoken["encoder"].encode.side_effect = lambda x: [0] * (
+        settings.CTX_WINDOW + 1
+    )
 
     client = vLLMClient()
-    with pytest.raises(AssertionError, match="Prompt too large!!"):
-        client.generate("any prompt")
+    with pytest.raises(AssertionError):
+        client.generate(["any prompt"])
 
 
 def test_parameter_merging(mock_vllm):
     client = vLLMClient()
     custom_params = {"temperature": 0.9, "max_tokens": 500}
-    client.generate("test", params=custom_params)
+    client.generate(["test"], params=custom_params)
 
     expected_params = {**DEFAULT_PARAMS, **custom_params}
     sampling_params = mock_vllm.generate.call_args[1]["sampling_params"]

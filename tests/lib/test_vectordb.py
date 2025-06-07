@@ -6,7 +6,7 @@ import torch
 
 from lib.models.embedding import EmbeddingModel
 from lib.models.rerank import RerankerModel
-from lib.types import Chunk, Document
+from lib.schemas import Chunk, Document
 from lib.vectordb import KnowledgeBase
 
 EMBEDDING_OUTPUT_SIZE = 768
@@ -28,7 +28,7 @@ def mock_embedding_model():
 @pytest.fixture
 def mock_reranker_model():
     model = Mock(spec=RerankerModel)
-    model.compute_score.return_value = torch.tensor([[0.9]])
+    model.compute_score.return_value = torch.tensor([[0.9]], dtype=torch.float16)
     return model
 
 
@@ -39,7 +39,7 @@ def sample_documents():
 
 @pytest.fixture
 def sample_chunks():
-    return [Chunk(id="1", doc_id="1", page=1, text="Test chunk text")]
+    return [Chunk(id="1", doc_id="1", text="Test chunk text", original_text="Test original chunk text")]
 
 
 # Test Cases ------------------------------------------------------------------

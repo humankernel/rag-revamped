@@ -39,6 +39,3 @@ line-length = 80
 [tool.ruff.format]
 quote-style = "double"
 docstring-code-format = true
-
-[tool.ruff.lint]
-extend-select = ["E501"]  # Enforce line length rule

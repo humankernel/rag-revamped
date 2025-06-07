@@ -1,9 +1,9 @@
 import logging
-from typing import Final, Literal, TypedDict
+from typing import Final, TypedDict
 
 from lib.helpers import count_tokens
 from lib.settings import settings
-from lib.types import ChatMessage, RetrievedChunk
+from lib.schemas import ChatMessage, RetrievedChunk
 
 log = logging.getLogger("app")
 
@@ -26,10 +26,11 @@ PROMPT: Final[Prompt] = {
   </input>
   <instructions>
     <item>Genera una respuesta en el idioma de la consulta.</item>
-    <item>Cita cada afirmación con [n] al final, n hace referencia al numero del chunk del contexto utilizado para responder. </item>
+    <item>Cita cada afirmación con [n] al final si procede, n hace referencia al numero del chunk del contexto utilizado para responder. </item>
     <item>Si no se provee de contexto o no es suficiente, NO INVENTES LA RESPUESTA, solo di que no hay contexto suficiente.</item>
   </instructions>
 </prompt>
+/no_think
 """,
     "contextualize": """
 <document>
@@ -42,6 +43,7 @@ Here is a chunk extracted from the document:
 </chunk>
 
 Provide a concise context that places this chunk within the overall document. Focus on its role, relevance, and connection to the rest of the content. The context should be brief, precise, and tailored to improve search retrieval. Avoid redundancy, and refrain from repeating ideas. Answer with only the context and nothing else.
+/no_think
 """,
 }
 

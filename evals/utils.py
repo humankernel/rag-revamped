@@ -3,7 +3,7 @@ from pathlib import Path
 import pandas as pd
 from pydantic import BaseModel
 
-from lib.types import Chunk, Document
+from lib.schemas import Chunk, Document
 
 # Types ------------------------------------------------------------------
 

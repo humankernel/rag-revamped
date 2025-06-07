@@ -12,7 +12,7 @@ from lib.models.llm import GenerationParams, OpenAIClient, vLLMClient
 from lib.models.rerank import RerankerModel
 from lib.prompts import create_prompt
 from lib.settings import settings
-from lib.types import (
+from lib.schemas import (
     ChatMessage,
     Message,
     RetrievedChunk,
@@ -23,16 +23,12 @@ log = logging.getLogger("app")
 
 ChatMessageAndChunk = tuple[ChatMessage | str, list[RetrievedChunk]]
 MAX_RETRIES = 3
-TOP_K = 10
-TOP_R = 4
-THRESHOLD = 0.5
 
 # Models -----------------------------------------------------------------------
 
 llm = vLLMClient() if settings.ENVIRONMENT == "prod" else OpenAIClient()
 embeddings = EmbeddingModel()
-# reranker = RerankerModel()
-reranker = None
+reranker = RerankerModel()
 
 
 # Logic ------------------------------------------------------------------------
@@ -47,6 +43,9 @@ def ask(
     top_p: float,
     frequency_penalty: float,
     presence_penalty: float,
+    threshold: float,
+    top_k: int,
+    top_r: int,
 ) -> Generator[ChatMessageAndChunk, None, None]:
     for _ in range(MAX_RETRIES):
         try:
@@ -96,9 +95,9 @@ def ask(
                     query,
                     embedding_model=embeddings,
                     reranker_model=reranker,
-                    top_k=TOP_K,
-                    top_r=TOP_R,
-                    threshold=THRESHOLD,
+                    top_k=top_k,
+                    top_r=top_r,
+                    threshold=threshold,
                 )
                 log.debug("Retrieved %d chunks", len(chunks))
 
@@ -116,6 +115,3 @@ def ask(
         except Exception as e:
             log.exception("Pipeline failed: %s", str(e), exc_info=True)
             yield "Ocurrio un error durante el proceso.", []
-
-
-# Como DMA reduce el uso de la CPU?

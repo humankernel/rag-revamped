@@ -1,3 +1,4 @@
+from functools import cache
 import logging
 import time
 from pathlib import Path
@@ -9,7 +10,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from lib.models.llm import OpenAIClient, vLLMClient
 from lib.prompts import PROMPT
-from lib.types import Chunk, Document
+from lib.schemas import Chunk, Document
 
 log = logging.getLogger("app")
 
@@ -27,7 +28,7 @@ class ContextualizedChunk(TypedDict):
 def normalize_text(text: str) -> str:
     return text.strip().replace("\n", " ")
 
-
+@cache
 def process_pdf(
     path: Path,
     model: vLLMClient | OpenAIClient | None = None,

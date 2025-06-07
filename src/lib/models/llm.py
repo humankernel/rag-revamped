@@ -8,7 +8,7 @@ from vllm.sampling_params import GuidedDecodingParams
 
 from lib.helpers import count_tokens
 from lib.settings import settings
-from lib.types import ChatMessage, GenerationParams
+from lib.schemas import ChatMessage, GenerationParams
 
 DEFAULT_PARAMS: GenerationParams = {
     "max_tokens": 500,
@@ -32,7 +32,7 @@ class OpenAIClient:
     def generate(
         self,
         prompts: list[str],
-        output_format: Type[BaseModel] | None,
+        output_format: Type[BaseModel] | None = None,
         params: GenerationParams = {},
     ) -> list[str]:
         assert all(
