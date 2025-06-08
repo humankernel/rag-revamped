@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+from uuid import uuid4
 
 import fitz
 import vllm
@@ -8,9 +9,8 @@ from docling_core.types.doc.document import DoclingDocument, DocTagsDocument
 from PIL import Image
 
 from lib.settings import settings
-from lib.types import Chunk, Document
+from lib.schemas import Chunk, Document
 
-MODEL_PATH = "ds4sd/SmolDocling-256M-preview"
 IMAGE_DIR = "img/"  # Place your page images here
 OUTPUT_DIR = "out/"
 
@@ -23,7 +23,7 @@ class SmolDocling:
     def __init__(self) -> None:
         log.info("Loading SmolDocling")
         self.model = vllm.LLM(
-            model=MODEL_PATH,
+            model="ds4sd/SmolDocling-256M-preview",
             limit_mm_per_prompt={"image": BATCH_SIZE},
             dtype=settings.DTYPE,
             device=settings.DEVICE,
@@ -88,15 +88,16 @@ class SmolDocling:
         log.info("Chunking ...")
         chunk_iter = self.chunker.chunk(dl_doc=doc)
 
+        doc_id = str(uuid4())
         document = Document(
-            id="1", title=str(pdf_path), language="en", source=str(pdf_path)
+            id=doc_id, title=str(pdf_path), language="en", source=str(pdf_path)
         )
         chunks = [
             Chunk(
                 id=str(id),
-                doc_id="1",
-                page=id,
+                doc_id=doc_id,
                 text=self.chunker.contextualize(chunk),
+                original_text="...",
             )
             for id, chunk in enumerate(chunk_iter)
         ]

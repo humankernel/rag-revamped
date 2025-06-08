@@ -20,24 +20,15 @@ from lib.schemas import Chunk, Document, RetrievedChunk
 log = logging.getLogger("app")
 
 
-class KnowledgeBase:
-    def __init__(self, name: str, test: bool = False) -> None:
-        assert name
-        self.name = name
-        self.db_path = (
-            Path(__file__).resolve().parent.parent.parent
-            / "data"
-            / name
-            / "vectordb.pkl"
-        )
-        self.test = test
+class VectorDB:
+    def __init__(self, db_path: Path | None = None) -> None:
+        self.db_path = db_path
         self.documents: list[Document] = []
         self.chunks: list[Chunk] = []
         self.dense_embeddings: NDArray | None = None
         self.sparse_embeddings: list[dict[str, float]] | None = None
         self.colbert_embeddings: list[NDArray] | None = None
-        if not self.test:
-            self.load()
+        self.load()
 
     @property
     def is_empty(self) -> bool:
@@ -76,24 +67,25 @@ class KnowledgeBase:
         )
         log.debug(f"Finished emb {len(docs)} chunks in {time.time() - start}")
 
+        dense_vecs = result["dense"]
+        sparse_vecs = result["sparse"]
+        colbert_vecs = result["colbert"]
+
         if len(self.documents) == 0:
-            self.dense_embeddings = result["dense"]
-            self.sparse_embeddings = result["sparse"]
-            self.colbert_embeddings = result["colbert"]
+            self.dense_embeddings = dense_vecs
+            self.sparse_embeddings = sparse_vecs
+            self.colbert_embeddings = colbert_vecs
         else:
             self.dense_embeddings = np.vstack([
                 self.dense_embeddings,
-                result["dense"],
+                dense_vecs,
             ])
-            self.sparse_embeddings.extend(result["sparse"])
-            # can't do vstack because colbert are unhomougenious
-            self.colbert_embeddings.extend(result["colbert"])
+            self.sparse_embeddings.extend(sparse_vecs)
+            self.colbert_embeddings.extend(colbert_vecs)
 
         self.documents.extend(docs)
         self.chunks.extend(chunks)
-
-        if not self.test:
-            self.save()
+        self.save()
 
     def search(
         self,
@@ -106,8 +98,13 @@ class KnowledgeBase:
     ) -> list[RetrievedChunk]:
         """Hybrid Search with Reranking"""
         assert not self.is_empty
-        assert 0 < threshold <= 1
+        assert 0 <= threshold < 1
         assert len(self.documents) > 0
+
+        log.info("VectorDB search for query: %s", query)
+
+        if self.is_empty:
+            return []
 
         result = embedding_model.encode(
             [query],
@@ -115,11 +112,9 @@ class KnowledgeBase:
             return_sparse=True,
             return_colbert=True,
         )
-        q_dense, q_sparse, q_colbert = (
-            result["dense"],
-            result["sparse"],
-            result["colbert"],
-        )
+        q_dense = result["dense"]
+        q_sparse = result["sparse"]
+        q_colbert = result["colbert"]
 
         dense_scores = dense_similarity(q_dense, self.dense_embeddings)[0]
         sparse_scores = sparse_similarity(q_sparse, self.sparse_embeddings)[0]
@@ -130,18 +125,21 @@ class KnowledgeBase:
             scores=(dense_scores, sparse_scores, colbert_scores),
             weights=(0.4, 0.2, 0.4),
         )[0]
-        rerank_scores = None
+        rerank_scores = []
         scores, top_indices = torch.topk(
             hybrid_scores, k=min(top_k, len(hybrid_scores))
         )
+        log.debug("Hybrid Scores: %s", scores)
 
         if reranker_model:
-            top_texts = (self.chunks[idx].text for idx in top_indices.tolist())
-            pairs = list((query, text) for text in top_texts)
-            rerank_scores = reranker_model.compute_score(pairs)
+            top_texts: list[str] = list(
+                self.chunks[idx].text for idx in top_indices.tolist()
+            )
+            rerank_scores = reranker_model.compute_score(query, top_texts)
             scores, top_indices = torch.topk(
                 rerank_scores, k=min(top_r, len(rerank_scores))
             )
+            log.debug("Rerank Scores: %s", scores)
 
         retrieved_chunks = []
         for idx in top_indices[scores >= threshold].tolist():
@@ -150,21 +148,26 @@ class KnowledgeBase:
             colbert_score = colbert_scores[idx].item()
             hybrid_score = hybrid_scores[idx].item()
             rerank_score = rerank_scores[idx].item() if reranker_model else None
-            retrieved_chunks.append(
-                RetrievedChunk(
-                    chunk=self.chunks[idx],
-                    scores={
-                        "dense_score": dense_score,
-                        "sparse_score": sparse_score,
-                        "colbert_score": colbert_score,
-                        "hybrid_score": hybrid_score,
-                        "rerank_score": rerank_score,
-                    },
-                )
+            chunk = RetrievedChunk(
+                chunk=self.chunks[idx],
+                scores={
+                    "dense_score": dense_score,
+                    "sparse_score": sparse_score,
+                    "colbert_score": colbert_score,
+                    "hybrid_score": hybrid_score,
+                    "rerank_score": rerank_score,
+                },
             )
+            retrieved_chunks.append(chunk)
+            log.debug("chunk: %s", chunk)
+
+        log.debug("Retrieved %d chunks", len(retrieved_chunks))
         return retrieved_chunks
 
     def save(self) -> None:
+        if not self.db_path:
+            return
+
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         data = {
             "documents": self.documents,
@@ -178,6 +181,9 @@ class KnowledgeBase:
         log.debug(f"Saved KnowledgeBase state to {self.db_path}")
 
     def load(self) -> None:
+        if not self.db_path:
+            return
+
         if self.db_path.exists():
             with open(self.db_path, "rb") as f:
                 data = pickle.load(f)
@@ -190,6 +196,7 @@ class KnowledgeBase:
         else:
             self.db_path.parent.mkdir(parents=True, exist_ok=True)
             log.debug(f"No saved state found at {self.db_path}")
+
 
 # from core.indexing import process_pdf
 # embedding_model = EmbeddingModel()

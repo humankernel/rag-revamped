@@ -7,7 +7,7 @@ from core.generation import generate_answer
 from lib.models.embedding import EmbeddingModel
 from lib.models.llm import OpenAIClient
 from lib.models.rerank import RerankerModel
-from lib.vectordb import KnowledgeBase
+from lib.vectordb import VectorDB
 
 # Configuration ----------------------------------------------------------------
 
@@ -43,7 +43,7 @@ def main() -> None:
             continue
 
         # 1. Insert
-        db = KnowledgeBase(name=doc.source, test=True)
+        db = VectorDB(Path(doc.source))
         db.insert(
             docs=[doc],
             chunks=doc_chunks,

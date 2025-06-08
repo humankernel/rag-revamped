@@ -8,16 +8,12 @@ from uuid import uuid4
 import fitz
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
+from lib.helpers import normalize_text
 from lib.models.llm import OpenAIClient, vLLMClient
 from lib.prompts import PROMPT
 from lib.schemas import Chunk, Document
 
 log = logging.getLogger("app")
-
-splitter = RecursiveCharacterTextSplitter(
-    chunk_size=1200,
-    chunk_overlap=200,
-)
 
 
 class ContextualizedChunk(TypedDict):
@@ -25,18 +21,22 @@ class ContextualizedChunk(TypedDict):
     chunk_text: str
 
 
-def normalize_text(text: str) -> str:
-    return text.strip().replace("\n", " ")
-
 @cache
 def process_pdf(
     path: Path,
+    chunk_size: int = 1200,
+    chunk_overlap: int = 200,
     model: vLLMClient | OpenAIClient | None = None,
+    extend_chunks: bool = True,
 ) -> tuple[Document, list[Chunk]]:
     log.info("Process PDF: %s", path)
     if path.suffix != ".pdf":
         raise ValueError("Input file must be a PDF")
 
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap,
+    )
     chunks_with_context: list[ContextualizedChunk] = []
 
     # 1. Split PDF content into chunks (with context)
@@ -53,7 +53,7 @@ def process_pdf(
             ])
 
     # 2. Extend chunks with contextual info (w/ LLM)
-    if model:
+    if extend_chunks and model:
         log.info("Extending chunks with context")
         # Generate prompts for augmentation
         prompts = [

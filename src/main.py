@@ -4,9 +4,9 @@ import time
 import gradio as gr
 
 from core.pipeline import ask
-from lib.settings import settings
 from lib.schemas import RetrievedChunk
-from lib.vectordb import KnowledgeBase
+from lib.settings import settings
+from lib.vectordb import VectorDB
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -23,52 +23,67 @@ def main() -> None:
     log.info("Starting RAG in %s mode", settings.ENVIRONMENT)
 
     with gr.Blocks(fill_height=True) as ui:
-        db = gr.State(KnowledgeBase("att", test=True))
+        db = gr.State(VectorDB())
         local_storage = gr.BrowserState()
         chunks = gr.State([])
 
         with gr.Sidebar(position="left", open=False):
-            gr.Markdown("# Model Settings")
+            gr.Markdown("# Model Options")
             temperature = gr.Slider(
-                0.0,
-                1.0,
+                minimum=0.0,
+                maximum=1.0,
                 value=0.6,
                 step=0.1,
                 label="Temperature",
                 info="Controls randomness: Lower = more deterministic, Higher = more creative.",
             )
             top_p = gr.Slider(
-                0.0,
-                1.0,
+                minimum=0.0,
+                maximum=1.0,
                 value=0.95,
                 step=0.05,
                 label="Top-p",
                 info="Considers the smallest set of tokens whose cumulative probability exceeds p.",
             )
             max_tokens = gr.Slider(
-                1,
-                4000,
+                minimum=1,
+                maximum=4000,
                 value=1024,
                 step=10,
                 label="Max Tokens",
                 info="Sets the maximum number of tokens in the response.",
             )
             frequency_penalty = gr.Slider(
-                0.0,
-                2.0,
+                minimum=0.0,
+                maximum=2.0,
                 value=0.5,
                 step=0.1,
                 label="Frequency Penalty",
                 info="Reduces the likelihood of repeating common phrases.",
             )
             presence_penalty = gr.Slider(
-                0.0,
-                2.0,
+                minimum=0.0,
+                maximum=2.0,
                 value=0.5,
                 step=0.1,
                 label="Presence Penalty",
                 info="Encourages new topics.",
             )
+
+            gr.Markdown("# Indexing Options")
+            advanced_indexing = gr.Checkbox(
+                value=True,
+                label="Extend Chunks with Contextual Information",
+                info="Enabling this with improve chunks, but make indexing much more slow.",
+            )
+            chunk_size = gr.Number(
+                value=1200,
+                minimum=100,
+                maximum=5000,
+                step=10,
+                label="Max size of each chunk",
+            )
+
             gr.Markdown("# Retrieval Options")
             top_k = gr.Number(
                 value=20,
@@ -126,9 +141,11 @@ def main() -> None:
                 top_p,
                 frequency_penalty,
                 presence_penalty,
-                threshold,
+                advanced_indexing,
+                chunk_size,
                 top_k,
-                top_r
+                top_r,
+                threshold,
             ],
             additional_outputs=[chunks],
             save_history=True,

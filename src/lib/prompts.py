@@ -1,7 +1,7 @@
 import logging
 from typing import Final, TypedDict
 
-from lib.helpers import count_tokens
+from lib.helpers import count_tokens, normalize_text
 from lib.settings import settings
 from lib.schemas import ChatMessage, RetrievedChunk
 
@@ -15,33 +15,23 @@ class Prompt(TypedDict):
 
 PROMPT: Final[Prompt] = {
     "generation": """
-<prompt>
-  <input>
-    <context>
-      {context}
-    </context>
-    <query>
-      {query}
-    </query>
-  </input>
-  <instructions>
-    <item>Genera una respuesta en el idioma de la consulta.</item>
-    <item>Cita cada afirmación con [n] al final si procede, n hace referencia al numero del chunk del contexto utilizado para responder. </item>
-    <item>Si no se provee de contexto o no es suficiente, NO INVENTES LA RESPUESTA, solo di que no hay contexto suficiente.</item>
-  </instructions>
-</prompt>
+Your task is to answer the user's question using only the provided context. If the answer can be found within the context, respond accordingly. If the context does not contain enough relevant information to answer, reply with there is not enough relevant information. Always respond in the same language as the use's question.
+<context>
+    {context}
+</context>
+<question>
+    {query}
+</question>
 /no_think
 """,
     "contextualize": """
 <document>
 {context}
 </document>
-
 Here is a chunk extracted from the document:
 <chunk>
 {chunk}
 </chunk>
-
 Provide a concise context that places this chunk within the overall document. Focus on its role, relevance, and connection to the rest of the content. The context should be brief, precise, and tailored to improve search retrieval. Avoid redundancy, and refrain from repeating ideas. Answer with only the context and nothing else.
 /no_think
 """,
@@ -58,24 +48,21 @@ def create_prompt(
 
     history = history or []
     chunks = chunks or []
+
     context = (
         "\n".join(
-            f"<{i}>{c.chunk.text.replace('\n', ' ')}</{i}>"
+            f"<{i}>"
+            f"<chunk_info> {normalize_text(c.chunk.text)} </chunk_info>"
+            f"<chunk_text> {normalize_text(c.chunk.original_text)} </chunk_text>"
+            f"</{i}>"
             for i, c in enumerate(chunks)
         )
         if chunks
         else "NO CONTEXT"
     )
+    prompt_str = PROMPT["generation"].format(context=context, query=query)
 
-    # Add history + context + user query
-    messages: list[ChatMessage] = [
-        {
-            "role": "user",
-            "content": PROMPT["generation"].format(
-                context=context, query=query
-            ),
-        }
-    ]
+    messages: list[ChatMessage] = [{"role": "user", "content": prompt_str}]
     messages.extend(filter(lambda m: len(m["content"]) > 0, history))
     log.debug(
         "Total Tokens: %d",
@@ -93,7 +80,6 @@ def create_prompt(
         total_tokens += tokens
 
     assert total_tokens < max_tokens
-    log.debug("Response without RAG prompt:\n%s", prompt)
     return prompt
 
 

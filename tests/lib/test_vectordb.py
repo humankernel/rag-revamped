@@ -1,3 +1,4 @@
+from pathlib import Path
 from unittest.mock import Mock
 
 import numpy as np
@@ -7,7 +8,7 @@ import torch
 from lib.models.embedding import EmbeddingModel
 from lib.models.rerank import RerankerModel
 from lib.schemas import Chunk, Document
-from lib.vectordb import KnowledgeBase
+from lib.vectordb import VectorDB
 
 EMBEDDING_OUTPUT_SIZE = 768
 
@@ -28,25 +29,38 @@ def mock_embedding_model():
 @pytest.fixture
 def mock_reranker_model():
     model = Mock(spec=RerankerModel)
-    model.compute_score.return_value = torch.tensor([[0.9]], dtype=torch.float16)
+    model.compute_score.return_value = torch.tensor(
+        [[0.9]], dtype=torch.float16
+    )
     return model
 
 
 @pytest.fixture
 def sample_documents():
-    return [Document(id="1", source="test", metadata={"created_at": "2023-01-01"})]
+    return [
+        Document(id="1", source="test", metadata={"created_at": "2023-01-01"})
+    ]
 
 
 @pytest.fixture
 def sample_chunks():
-    return [Chunk(id="1", doc_id="1", text="Test chunk text", original_text="Test original chunk text")]
+    return [
+        Chunk(
+            id="1",
+            doc_id="1",
+            text="Test chunk text",
+            original_text="Test original chunk text",
+        )
+    ]
 
 
 # Test Cases ------------------------------------------------------------------
 
 
-def test_insert_documents_and_chunks(mock_embedding_model, sample_documents, sample_chunks):
-    kb = KnowledgeBase("test", test=True)
+def test_insert_documents_and_chunks(
+    mock_embedding_model, sample_documents, sample_chunks
+):
+    kb = VectorDB()
     kb.insert(
         docs=sample_documents,
         chunks=sample_chunks,
@@ -63,26 +77,28 @@ def test_insert_documents_and_chunks(mock_embedding_model, sample_documents, sam
 
 
 def test_save_and_load(mock_embedding_model, sample_documents, sample_chunks):
+    db_path = Path("testdb")
+
     # Insert and save
-    kb = KnowledgeBase("test_persistence", test=True)
+    kb = VectorDB(db_path=db_path)
     kb.insert(
         docs=sample_documents,
         chunks=sample_chunks,
         embedding_model=mock_embedding_model,
     )
-    kb.save()
 
     # Load into new instance
-    kb_loaded = KnowledgeBase("test_persistence", test=True)
-    kb_loaded.load()
+    kb_loaded = VectorDB(db_path=db_path)
 
     assert not kb_loaded.is_empty
     assert len(kb_loaded.chunks) == len(sample_chunks)
     assert np.array_equal(kb.dense_embeddings, kb_loaded.dense_embeddings)
 
 
-def test_search_with_reranking(mock_embedding_model, mock_reranker_model, sample_documents, sample_chunks):
-    kb = KnowledgeBase("test_search", test=True)
+def test_search_with_reranking(
+    mock_embedding_model, mock_reranker_model, sample_documents, sample_chunks
+):
+    kb = VectorDB(Path("testdb"))
     kb.insert(
         docs=sample_documents,
         chunks=sample_chunks,

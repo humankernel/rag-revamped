@@ -57,20 +57,21 @@ class RetrievedChunk:
     def __hash__(self):
         return hash(self.chunk.id)
 
-    def __repl__(self) -> str:
-        source = self.chunk.doc_id
+    def __str__(self) -> str:
         dense = self.scores.get("dense_score", 0.0)
         sparse = self.scores.get("sparse_score", 0.0)
         colbert = self.scores.get("colbert_score", 0.0)
         hybrid = self.scores.get("hybrid_score", 0.0)
         rerank = self.scores.get("rerank_score", 0.0)
         text = self.chunk.text[:500]
+        original_text = self.chunk.original_text[:500]
 
         return (
-            f"Source {source}\n"
-            f"Dense: {dense}, Sparse:  {sparse}, Colbert: {colbert:.3f}\n"
-            f"Hybrid: {hybrid:.3f} Rerank:  {rerank:.3f}\n\n"
+            f"Dense: {dense}\nSparse: {sparse}\nColbert: {colbert:.3f}\n"
+            f"Hybrid: {hybrid:.3f} - Rerank:  {rerank:.3f}\n\n"
             f"{text}"
+            " ======== "
+            f"{original_text}"
         )
 
 

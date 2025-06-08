@@ -11,13 +11,13 @@ from lib.models.embedding import EmbeddingModel
 from lib.models.llm import GenerationParams, OpenAIClient, vLLMClient
 from lib.models.rerank import RerankerModel
 from lib.prompts import create_prompt
-from lib.settings import settings
 from lib.schemas import (
     ChatMessage,
     Message,
     RetrievedChunk,
 )
-from lib.vectordb import KnowledgeBase
+from lib.settings import settings
+from lib.vectordb import VectorDB
 
 log = logging.getLogger("app")
 
@@ -37,15 +37,20 @@ reranker = RerankerModel()
 def ask(
     message: Message,
     history: list[ChatMessage],
-    db: KnowledgeBase,
+    db: VectorDB,
+    # generation params
     temperature: float,
     max_tokens: int,
     top_p: float,
     frequency_penalty: float,
     presence_penalty: float,
-    threshold: float,
+    # indexing
+    advanced_indexing: bool,
+    chunk_size: int,
+    # retrieval
     top_k: int,
     top_r: int,
+    threshold: float,
 ) -> Generator[ChatMessageAndChunk, None, None]:
     for _ in range(MAX_RETRIES):
         try:
@@ -70,7 +75,13 @@ def ask(
                     ),
                     [],
                 )
-                doc, doc_chunks = process_pdf(path=Path(file), model=llm)
+                doc, doc_chunks = process_pdf(
+                    path=Path(file),
+                    chunk_size=chunk_size,
+                    chunk_overlap=200,
+                    model=llm,
+                    extend_chunks=advanced_indexing,
+                )
                 db.insert([doc], doc_chunks, embeddings, batch_size=32)
                 yield (
                     ChatMessage(
@@ -89,17 +100,15 @@ def ask(
                 return
 
             # 2. Retrieval
-            chunks: list[RetrievedChunk] = []
-            if not db.is_empty:
-                chunks = db.search(
-                    query,
-                    embedding_model=embeddings,
-                    reranker_model=reranker,
-                    top_k=top_k,
-                    top_r=top_r,
-                    threshold=threshold,
-                )
-                log.debug("Retrieved %d chunks", len(chunks))
+            chunks = db.search(
+                query,
+                embedding_model=embeddings,
+                reranker_model=reranker,
+                top_k=top_k,
+                top_r=top_r,
+                threshold=threshold,
+            )
+            log.debug("Retrieved %d chunks", len(chunks))
 
             # 3. Generation
             prompt = create_prompt(query, history, chunks)
@@ -114,4 +123,5 @@ def ask(
 
         except Exception as e:
             log.exception("Pipeline failed: %s", str(e), exc_info=True)
+            log.info("Retrying ...")
             yield "Ocurrio un error durante el proceso.", []

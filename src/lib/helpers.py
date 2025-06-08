@@ -8,6 +8,10 @@ from lib.schemas import ChatMessage, Message
 log = logging.getLogger("app")
 
 
+def normalize_text(text: str) -> str:
+    return text.strip().replace("\n", " ")
+
+
 @lru_cache(1000)
 def count_tokens(text: str) -> int:
     if not text:
