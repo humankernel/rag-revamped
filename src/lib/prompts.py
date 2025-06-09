@@ -11,28 +11,79 @@ log = logging.getLogger("app")
 class Prompt(TypedDict):
     generation: str
     contextualize: str
+    expand_query: str
+    decompose_query: str
 
 
 PROMPT: Final[Prompt] = {
     "generation": """
-Your task is to answer the user's question using only the provided context. If the answer can be found within the context, respond accordingly. If the context does not contain enough relevant information to answer, reply with there is not enough relevant information. Always respond in the same language as the use's question.
-<context>
+Tu tarea es responder la pregunta del usuario usando únicamente el contexto proporcionado.
+<reglas>
+    - Si el contexto no contiene información relevante suficiente para responder, di que no hay información relevante suficiente.
+    - !IMPORTANTE: Siempre RESPONDE EN EL MISMO IDIOMA que la pregunta del usuario.
+    - Referencia el chunk original usado para responder con [n], donde n es el número del chunk (ej. [1] para chunk <1>)
+</reglas>
+<contexto>
     {context}
-</context>
-<question>
+</contexto>
+<pregunta>
     {query}
-</question>
+</pregunta>
 /no_think
 """,
     "contextualize": """
-<document>
+<documento>
 {context}
-</document>
-Here is a chunk extracted from the document:
+</documento>
+Aquí hay un fragmento extraído del documento:
 <chunk>
 {chunk}
 </chunk>
-Provide a concise context that places this chunk within the overall document. Focus on its role, relevance, and connection to the rest of the content. The context should be brief, precise, and tailored to improve search retrieval. Avoid redundancy, and refrain from repeating ideas. Answer with only the context and nothing else.
+Proporciona un contexto conciso que sitúe este fragmento dentro del documento general. Enfócate en su función, relevancia y conexión con el resto del contenido. El contexto debe ser breve, preciso y diseñado para mejorar la recuperación en búsquedas. Evita redundancias y no repitas ideas. Responde solo con el contexto y nada más.
+/no_think
+""",
+    "expand_query": """
+Transforma esta pregunta del usuario en una versión más detallada para búsqueda documental.
+<reglas>
+1. Proporciona SOLO UNA pregunta expandida.
+2. Nunca respondas la pregunta original.
+3. Añade términos técnicos y contexto relevantes.
+4. Mantén la intención original.
+5. Longitud: 1-2 oraciones.
+6. MANTENER EL IDIOMA ORIGINAL.
+</reglas>
+<ejemplo>
+Original: "Qué causa la diabetes"
+Expandida: "¿Cuáles son los factores fisiológicos, genéticos y ambientales que contribuyen al desarrollo de diabetes mellitus tipo 1 y 2?"
+</ejemplo>
+<ejemplo>
+Original: "Cómo prevenir infartos"
+Expandida: "¿Qué estrategias de prevención primaria y secundaria son efectivas para reducir el riesgo de infarto agudo de miocardio, considerando dieta, ejercicio y control de hipertensión?"
+</ejemplo>
+Original: "{query}"
+Expandida: 
+/no_think
+""",
+    "decompose_query": """
+Descompón esta consulta en 2-3 sub-preguntas independientes que puedan responderse por separado.
+<reglas>
+1. Proporciona SOLO las sub-preguntas separadas por "|"
+2. NO incluyas numeración como "Subpregunta 1"
+3. NO añadas comentarios o explicaciones
+4. Cada sub-pregunta debe ser completa y clara por sí misma
+5. Mantén todos los términos técnicos del original
+6. MANTENER EL IDIOMA ORIGINAL
+</reglas>
+<ejemplo>
+Input: "Cuáles son las causas y tratamientos de la diabetes"
+Output: "¿Cuáles son las principales causas de la diabetes?|¿Cuáles son los tratamientos más efectivos para la diabetes?"
+</ejemplo>
+<ejemplo>
+Input: "Cómo funcionan las cachés CPU y por qué son importantes"
+Output: "¿Cuál es el mecanismo de funcionamiento de las cachés CPU?|¿Por qué son importantes las cachés CPU para el rendimiento?"
+</ejemplo>
+Input: "{query}"
+Output:
 /no_think
 """,
 }

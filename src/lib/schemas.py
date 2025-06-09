@@ -62,7 +62,7 @@ class RetrievedChunk:
         sparse = self.scores.get("sparse_score", 0.0)
         colbert = self.scores.get("colbert_score", 0.0)
         hybrid = self.scores.get("hybrid_score", 0.0)
-        rerank = self.scores.get("rerank_score", 0.0)
+        rerank = self.scores.get("rerank_score", 0.0) or 0.0
         text = self.chunk.text[:500]
         original_text = self.chunk.original_text[:500]
 

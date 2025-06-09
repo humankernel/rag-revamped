@@ -63,7 +63,7 @@ class OpenAIClient:
         messages: list[ChatMessage],
         params: GenerationParams = {},
     ) -> Generator[str, None, None]:
-        assert isinstance(messages, list)
+        assert len(messages) > 0
 
         params = DEFAULT_PARAMS | params
         response = self.model.chat.completions.create(
@@ -128,11 +128,11 @@ class vLLMClient:
         messages: list[ChatMessage],
         params: GenerationParams = {},
     ) -> Generator[str, None, None]:
-        assert isinstance(messages, list)
+        assert len(messages) > 0
 
         params = DEFAULT_PARAMS | params
         response = self.model.chat(
-            messages, sampling_params=vllm.SamplingParams(**params)
+            messages=messages, sampling_params=vllm.SamplingParams(**params)
         )
         for output in response:
             yield output.outputs[0].text

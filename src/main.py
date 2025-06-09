@@ -74,7 +74,7 @@ def main() -> None:
             advanced_indexing = gr.Checkbox(
                 value=True,
                 label="Extend Chunks with Contextual Information",
-                info="Enabling this with improve chunks, but make indexing much more slow.",
+                info="Enabling this will improve chunks, but make indexing much more slow.",
             )
             chunk_size = gr.Number(
                 value=1200,
@@ -107,6 +107,18 @@ def main() -> None:
                 label="Retrieval Score Cutoff",
             )
             saved_message = gr.Markdown("", visible=False)
+
+            gr.Markdown("# Advanced Options")
+            use_query_expansion = gr.Checkbox(
+                value=True,
+                label="Expand the Query",
+                info="Enabling this will improve retrieval, but slow the answer.",
+            )
+            use_query_decomposition = gr.Checkbox(
+                value=True,
+                label="Query Decomposition",
+                info="Enabling this will improve retrieval for complex multi-hop queries, but slow the answer.",
+            )
 
         with gr.Sidebar(position="right", open=False):
             gr.Markdown("# References")
@@ -146,6 +158,8 @@ def main() -> None:
                 top_k,
                 top_r,
                 threshold,
+                use_query_expansion,
+                use_query_decomposition,
             ],
             additional_outputs=[chunks],
             save_history=True,
